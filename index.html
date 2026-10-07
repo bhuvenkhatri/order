@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Order Sheet Maker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--tx:#1d1d1b;--mut:#6b6b66;--ac:#c77d00;--bd:#ddd9cf;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a1a18;--card:#262623;--tx:#eee;--mut:#a5a59d;--bd:#3d3d38}}
+:root[data-theme="dark"]{--bg:#1a1a18;--card:#262623;--tx:#eee;--mut:#a5a59d;--bd:#3d3d38}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 -apple-system,system-ui,Segoe UI,sans-serif}
+main{max-width:560px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:14px}
+label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
+input[type=text],input[type=number],input[type=date]{width:100%;box-sizing:border-box;padding:11px;font-size:16px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx)}
+.sizes{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px}
+.sizes div{text-align:center;font-size:12px;color:var(--mut)}
+.sizes input{text-align:center;padding:10px 2px}
+button{width:100%;padding:14px;font-size:17px;font-weight:600;border:0;border-radius:10px;background:var(--ac);color:#fff}
+button.sec{background:var(--bd);color:var(--tx);font-size:15px;padding:10px;width:auto}
+.pic{display:flex;align-items:center;gap:10px}
+.pic img{width:56px;height:56px;object-fit:cover;border-radius:6px;display:none}
+.row{display:flex;gap:8px;align-items:center}
+.thumbs{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.thumbs img{width:56px;height:56px;object-fit:cover;border-radius:6px}
+.same{font-size:14px;margin-top:6px}
+#msg{margin-top:10px;font-size:14px;color:var(--mut);text-align:center}
+</style></head><body><main>
+<h1>Order Sheet Maker</h1>
+<div class="card">
+ <label>Customer name</label><input type="text" id="cust" autocapitalize="characters">
+ <label>Date</label><input type="date" id="date">
+ <label>Kitne style hain?</label><div class="row"><input type="number" id="n" min="1" max="60" value="1" inputmode="numeric"><button class="sec" id="mk">OK</button></div>
+</div>
+<div id="styles"></div>
+<button id="go" style="display:none">Excel + PDF banao</button>
+<div id="msg"></div>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js" onerror="var x=document.createElement('script');x.src='exceljs.min.js';document.head.appendChild(x)"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" onerror="var x=document.createElement('script');x.src='jspdf.umd.min.js';document.head.appendChild(x)"></script>
+<script>
+const ALL=['XS','S','M','L','XL','XXL','3XL'], $=id=>document.getElementById(id);
+const imgs={}; // key -> {buf,w,h,url}
+$('date').value=new Date().toISOString().slice(0,10);
+
+function nextCode(c){const m=/^(.*?)(\d+)$/.exec(c||'');return m?m[1]+String(+m[2]+1).padStart(m[2].length,'0'):''}
+
+function build(){
+  const n=Math.max(1,Math.min(60,+$('n').value||1)), box=$('styles'); box.innerHTML='';
+  for(let i=1;i<=n;i++){
+    const d=document.createElement('div');d.className='card';
+    d.innerHTML=`<b>Style ${i}</b>
+    <label>Style name (jaise SKIRT + TOP SET)</label><input type="text" id="nm${i}" autocapitalize="characters">
+    <label>Style code (jaise DHI0021)</label><input type="text" id="cd${i}" autocapitalize="characters">
+    <label>Style picture</label><input type="file" accept="image/*" id="sp${i}"><div class="thumbs" id="spt${i}"></div>
+    <label>Colors pictures (ek se zyada; dobara tap karke aur jod sakte ho)</label><input type="file" accept="image/*" multiple id="cp${i}"><div class="thumbs" id="cpt${i}"></div>
+    ${i>1?`<label class="same"><input type="checkbox" id="same${i}"> Pichhle style jaisi colors picture</label>`:''}
+    <label>Quantity</label><div class="sizes">${ALL.map((s,k)=>`<div ${k==0||k==6?'style="display:none"':''}>${s}<input type="number" inputmode="numeric" id="q${i}_${k}" placeholder="0"></div>`).join('')}</div>
+    <div class="row" style="margin-top:8px"><button type="button" class="sec" id="xs${i}">+ XS</button><button type="button" class="sec" id="x3${i}">+ 3XL</button></div>`;
+    box.appendChild(d);
+    [['xs',0,'XS','xs'],['x3',6,'3XL','x3']].forEach(([id,k,lab,flag])=>{const bt=d.querySelector('#'+id+i), cell=d.querySelector('#q'+i+'_'+k).parentElement;
+      bt.onclick=()=>{const on=d.dataset[flag]!=='1'; d.dataset[flag]=on?'1':''; cell.style.display=on?'':'none'; bt.textContent=(on?'- ':'+ ')+lab}});
+    d.querySelector('#sp'+i).onchange=e=>pickMany(e,'s'+i,'spt'+i,true);
+    d.querySelector('#cp'+i).onchange=e=>pickMany(e,'c'+i,'cpt'+i);
+    const cd=d.querySelector('#cd'+i);
+    if(i>1) d.querySelector('#nm'+i).addEventListener('focus',()=>{if(!cd.value)cd.value=nextCode($('cd'+(i-1)).value)});
+  }
+  $('go').style.display='block';
+}
+$('mk').onclick=build; build();
+
+// photos go into Excel in ORIGINAL quality (no shrinking)
+function readImg(f){return new Promise(res=>{
+  const url=URL.createObjectURL(f), im=new Image();
+  im.onload=async()=>{
+    const w=im.naturalWidth, h=im.naturalHeight; let buf, ext='jpeg';
+    if(f.type==='image/jpeg'||f.type==='image/png'){buf=await f.arrayBuffer(); if(f.type==='image/png')ext='png'}
+    else{const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0);
+      buf=await new Promise(r=>c.toBlob(b=>b.arrayBuffer().then(r),'image/jpeg',.95));}
+    res({buf,w,h,ext,url,el:im});
+  };
+  im.src=url;});}
+function showThumbs(key,boxId){
+  const box=$(boxId); box.innerHTML='';
+  (imgs[key]||[]).forEach((m,j)=>{const t=document.createElement('img'); t.src=m.url; t.title='hatane ke liye tap karo';
+    t.onclick=()=>{imgs[key].splice(j,1); showThumbs(key,boxId)}; box.appendChild(t)});
+  if((imgs[key]||[]).length>1){const c=document.createElement('div'); c.style.cssText='font-size:12px;color:var(--mut);align-self:center'; c.textContent=imgs[key].length+' photos (tap = hatao)'; box.appendChild(c)}
+}
+async function pickMany(e,key,boxId,single){
+  const fs=[...e.target.files]; e.target.value='';   // same input can be used again to ADD more photos
+  if(!fs.length) return;
+  if(single||!imgs[key]) imgs[key]=[];
+  for(const f of fs) imgs[key].push(await readImg(f));
+  showThumbs(key,boxId);
+}
+async function compose(list,W,H,G,fill){ // ONE picture W x H: tiles fill the frame fully, thin gaps
+  const S=6, c=document.createElement('canvas'); c.width=W*S; c.height=H*S;
+  const x=c.getContext('2d'); if(fill!=='inset'){x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height)}
+  const n=list.length;
+  if(n===1&&fill===true){const m=list[0],k=Math.max(W/m.w,H/m.h),sw=W/k,sh=H/k;x.drawImage(m.el,(m.w-sw)/2,(m.h-sh)/2,sw,sh,0,0,W*S,H*S)}
+  else if(n===1){ // single picture / ready-made collage: show it whole, centred
+    const m=list[0], k=Math.min((W-2*G)/m.w,(H-2*G)/m.h), w=m.w*k, h=m.h*k;
+    x.drawImage(m.el,(W-w)/2*S,(H-h)/2*S,w*S,h*S);
+  } else {
+    let best=null;
+    for(let R=1;R<=n;R++){                       // R rows, photos shared out evenly, every row spans full width
+      const counts=[]; for(let q=0;q<R;q++) counts.push(Math.floor(n/R)+(q<n%R?1:0));
+      const th=(H-G*(R+1))/R; let loss=0, j=0;
+      counts.forEach(cn=>{const tw=(W-G*(cn+1))/cn;
+        for(let q=0;q<cn;q++,j++){const m=list[j], k=Math.max(tw/m.w,th/m.h); loss+=1-(tw*th)/(m.w*k*m.h*k)}});
+      if(!best||loss<best.loss) best={R,counts,th,loss};
+    }
+    let j=0;
+    best.counts.forEach((cn,ri)=>{
+      const tw=(W-G*(cn+1))/cn, dy=G+ri*(best.th+G);
+      for(let q=0;q<cn;q++,j++){
+        const m=list[j], k=Math.max(tw/m.w,best.th/m.h), sw=tw/k, sh=best.th/k;
+        x.drawImage(m.el,(m.w-sw)/2,(m.h-sh)/2,sw,sh,(G+q*(tw+G))*S,dy*S,tw*S,best.th*S);
+      }});
+  }
+  const b=await new Promise(r=>fill==='inset'?c.toBlob(r,'image/png'):c.toBlob(r,'image/jpeg',.95));
+  return b.arrayBuffer();
+}
+function pick(e,key,imgId){
+  const f=e.target.files[0]; if(!f){delete imgs[key];return}
+  const url=URL.createObjectURL(f), im=new Image();
+  im.onload=async()=>{
+    const w=im.naturalWidth, h=im.naturalHeight;
+    let buf, ext='jpeg';
+    if(f.type==='image/jpeg'||f.type==='image/png'){buf=await f.arrayBuffer(); if(f.type==='image/png')ext='png'}
+    else{ // other formats (e.g. HEIC): convert at full size, high quality
+      const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0);
+      buf=await new Promise(r=>c.toBlob(b=>b.arrayBuffer().then(r),'image/jpeg',.95));
+    }
+    imgs[key]={buf,w,h,ext};const t=$(imgId);t.src=url;t.style.display='block';
+  };
+  im.src=url;
+}
+
+const B=12, FIRST=4, THIN={style:'thin'}, border={top:THIN,left:THIN,bottom:THIN,right:THIN};
+const AH=Math.round(10*15.95*4/3)-3, SW=112, CW=366;
+
+async function collect(){
+  const cust=$('cust').value.trim().toUpperCase(); if(!cust){alert('Customer ka naam likho');return null}
+  const [y,m,d]=$('date').value.split('-'), cards=[...document.querySelectorAll('#styles .card')];
+  const styles=[]; let lastList=[], lastBuf=null;
+  for(let i=1;i<=cards.length;i++){
+    const c=cards[i-1], xs=c.dataset.xs==='1', x3=c.dataset.x3==='1';
+    const q=ALL.map((s,k)=>((k==0&&!xs)||(k==6&&!x3))?0:(+$(`q${i}_${k}`).value||0));
+    let list=imgs['c'+i]||[]; const same=i>1&&$('same'+i)&&$('same'+i).checked;
+    let cb=null; if(same&&lastBuf) cb=lastBuf; else if(list.length){cb=await compose(list,CW,AH,4); lastBuf=cb}
+    styles.push({xs,x3,q,name:$('nm'+i).value.trim().toUpperCase(),code:$('cd'+i).value.trim().replace(/[()]/g,'').toUpperCase(),
+      so:(imgs['s'+i]||[])[0]||null, sb:(imgs['s'+i]||[]).length?await compose([imgs['s'+i][0]],SW,AH,6,'inset'):null, cb});
+  }
+  const useK=ALL.map((s,k)=>k==0?styles.some(x=>x.xs):k==6?styles.some(x=>x.x3):true);
+  const ks=ALL.map((s,k)=>k).filter(k=>useK[k]);
+  styles.forEach(s=>{s.tot=ks.reduce((a,k)=>a+s.q[k],0)});
+  return {cust,dtxt:`${d}-${m}-${y}`,styles,ks,grand:styles.reduce((a,s)=>a+s.tot,0)};
+}
+
+async function buildXlsx(D){
+  const ks=D.ks, m=ks.length, TC=5+m, wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('ORDER SHEET');
+  const col=n=>ws.getColumn(n).letter, n=D.styles.length;
+  ws.columns=[2.7,15.4,52.6,19.3,...ks.map(()=>4.5),5.4].map(w=>({width:w}));
+  ws.pageSetup={paperSize:9,orientation:'portrait',scale:m==7?74:m==6?77:80,horizontalCentered:true,margins:{left:.4,right:.4,top:.3,bottom:.3,header:.1,footer:.1}};
+  ws.getRow(2).height=20.25; ws.mergeCells(2,1,2,TC);
+  const t=ws.getCell('A2'); t.value=`${D.cust} ${D.dtxt}`; t.font={bold:true,size:14}; t.alignment={horizontal:'center',vertical:'middle'};
+  for(let c=1;c<=TC;c++) ws.getCell(2,c).border=border;
+  const put=(r,c,v,o={})=>{const x=ws.getCell(r,c);x.value=v;x.alignment={horizontal:o.h||'center',vertical:o.v||'middle'};if(o.b)x.font={bold:true};return x};
+  D.styles.forEach((s,idx)=>{
+    const i=idx+1, r=FIRST+idx*B;
+    for(let k=0;k<11;k++){ws.getRow(r+k).height=15.95;for(let c=1;c<=TC;c++)ws.getCell(r+k,c).border=border}
+    ws.getRow(r+11).height=6.75;
+    for(let c=1;c<=TC;c++) ws.getCell(r+11,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFC000'}};
+    [1,2,3].forEach(c=>ws.mergeCells(r+1,c,r+10,c));
+    put(r,1,i); put(r,2,'STYLE'); put(r,3,'COLORS'); put(r,4,'Description',{h:'left'}); put(r,TC,'Total');
+    put(r+1,4,s.name,{h:'left',b:1}); put(r+2,4,s.code?`(${s.code})`:'',{b:1});
+    ks.forEach((k,j)=>{const c=5+j, L=col(c);
+      put(r+1,c,ALL[k],{b:1}); if(s.q[k]) put(r+2,c,s.q[k],{b:1});
+      const tc=put(r+5,c,{formula:`SUM(${L}${r+2}:${L}${r+4})`,result:s.q[k]}); tc.font={color:{argb:'FFFF0000'},size:9}});
+    put(r+5,TC,{formula:`SUM(${col(5)}${r+5}:${col(TC-1)}${r+5})`,result:s.tot},{b:1});
+    put(r+7,4,'your Ref.',{h:'left',v:'top'});
+    if(s.sb){const id=wb.addImage({buffer:s.sb,extension:'png'}); ws.addImage(id,{tl:{col:1,row:r},br:{col:2,row:r+10},editAs:'twoCell'})}
+    if(s.cb){const id=wb.addImage({buffer:s.cb,extension:'jpeg'}); ws.addImage(id,{tl:{col:2,row:r},ext:{width:CW,height:AH},editAs:'oneCell'})}
+    if(i%5===0&&i<n) ws.getRow(r+11).addPageBreak();
+  });
+  const tr=FIRST+n*B+1;
+  ws.getCell(tr,4).value='GRAND TOTAL'; ws.getCell(tr,4).font={bold:true};
+  ws.mergeCells(tr,5,tr,4+m);
+  const g=ws.getCell(tr,5); g.value={formula:D.styles.map((s,idx)=>col(TC)+(FIRST+idx*B+5)).join('+'),result:D.grand};
+  g.font={bold:true}; g.alignment={horizontal:'center'};
+  ws.pageSetup.printArea=`A1:${col(TC)}${tr}`;
+  return new Blob([await wb.xlsx.writeBuffer()],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+
+function buildPdf(D){
+  const {jsPDF}=window.jspdf, doc=new jsPDF({unit:'pt',format:'a4'}), ks=D.ks, m=ks.length;
+  const M=22, PW=595-2*M, chars=[2.7,15.4,52.6,19.3,...ks.map(()=>4.5),5.4], sum=chars.reduce((a,b)=>a+b);
+  const X=[M]; chars.forEach(c=>X.push(X[X.length-1]+c/sum*PW));
+  const TH=24, GAP=5, BH=(842-2*M-TH-26)/5, rh=(BH-GAP)/11, nc=chars.length, TC=nc-1;
+  const T=(s,x,y,o={})=>{doc.setFont('helvetica',o.b?'bold':'normal');doc.setFontSize(o.sz||8);doc.setTextColor(...(o.c||[0,0,0]));doc.text(String(s),x,y,{align:o.a||'center',baseline:'middle'})};
+  const mid=c=>(X[c]+X[c+1])/2, line=(x1,y1,x2,y2)=>doc.line(x1,y1,x2,y2);
+  const pic=(buf,asp,cx,cy,cw,ch,fmt)=>{let w=cw,h=cw/asp; if(h>ch){h=ch;w=ch*asp}
+    doc.addImage(new Uint8Array(buf),fmt||'JPEG',cx+(cw-w)/2,cy+(ch-h)/2,w,h)};
+  doc.setLineWidth(.5); doc.setDrawColor(0);
+  D.styles.forEach((s,i)=>{
+    if(i%5===0){ if(i) doc.addPage(); doc.rect(M,M,PW,TH); T(`${D.cust} ${D.dtxt}`,M+PW/2,M+TH/2,{b:1,sz:13}) }
+    const y0=M+TH+(i%5)*BH;
+    doc.setFillColor(255,192,0); doc.rect(M,y0+11*rh,PW,GAP,'F');
+    doc.rect(M,y0,PW,11*rh);
+    for(let c=1;c<nc;c++) line(X[c],y0,X[c],y0+11*rh);
+    for(let r=1;r<11;r++) line(X[3],y0+r*rh,X[nc],y0+r*rh);
+    line(X[0],y0+rh,X[3],y0+rh);
+    const ry=r=>y0+(r+.5)*rh;
+    T(i+1,mid(0),ry(0)); T('STYLE',mid(1),ry(0)); T('COLORS',mid(2),ry(0)); T('Description',X[3]+2,ry(0),{a:'left'}); T('Total',mid(TC),ry(0));
+    T(s.name,X[3]+2,ry(1),{a:'left',b:1}); T(s.code?`(${s.code})`:'',mid(3),ry(2),{b:1});
+    ks.forEach((k,j)=>{const c=4+j; T(ALL[k],mid(c),ry(1),{b:1}); if(s.q[k]) T(s.q[k],mid(c),ry(2),{b:1}); T(s.q[k],mid(c),ry(5),{c:[255,0,0],sz:7})});
+    T(s.tot,mid(TC),ry(5),{b:1}); T('your Ref.',X[3]+2,ry(7),{a:'left'});
+    if(s.so) pic(s.so.buf,s.so.w/s.so.h,X[1]+4,y0+rh+4,X[2]-X[1]-8,10*rh-8,s.so.ext==='png'?'PNG':'JPEG');
+    if(s.cb) pic(s.cb,CW/AH,X[2]+1,y0+rh+1,X[3]-X[2]-2,10*rh-2);
+  });
+  const n=D.styles.length; let y=M+TH+(((n-1)%5)+1)*BH+6;
+  if(y+16>842-M){doc.addPage();y=M}
+  T('GRAND TOTAL',X[3]+2,y+8,{a:'left',b:1,sz:9}); T(D.grand,(X[4]+X[3+m+1])/2,y+8,{b:1,sz:9});
+  return doc.output('blob');
+}
+
+async function shareOrSave(blob,fname){
+  try{const f=new File([blob],fname,{type:blob.type});
+    if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});return}}
+  catch(err){if(err&&err.name==='AbortError')return}
+  const u=URL.createObjectURL(blob), a=document.createElement('a'); a.href=u; a.download=fname;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),60000);
+}
+
+$('go').onclick=async()=>{
+  $('msg').textContent='File ban rahi hai...';
+  try{
+    const D=await collect(); if(!D){$('msg').textContent='';return}
+    const xl=await buildXlsx(D), pdf=buildPdf(D), base=`${D.cust} ${D.dtxt}`;
+    $('msg').innerHTML='Taiyar hai! Neeche dabao:';
+    [['Excel save / share karo',xl,'.xlsx'],['PDF save / share karo',pdf,'.pdf']].forEach(([lab,bl,ext])=>{
+      const b=document.createElement('button'); b.textContent=lab; b.style.marginTop='8px'; b.onclick=()=>shareOrSave(bl,base+ext); $('msg').append(b)});
+  }catch(e){$('msg').textContent='Error: '+(e.message||e)}
+};
+</script></body></html>
