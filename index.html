@@ -107,25 +107,25 @@ button.bas{width:100%;flex:none}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 button.chip{width:auto;min-height:0;padding:8px 14px;font-size:15px;font-weight:600;border-radius:20px;background:transparent;color:var(--ac);border:1.5px solid var(--ac)}
 </style></head><body><main>
-<div class="top"><h1>Order Sheet Maker</h1><button type="button" class="ghost" id="newsheet">＋ Naya sheet</button></div>
+<div class="top"><h1>Order Sheet Maker</h1><button type="button" class="ghost" id="newsheet">＋ New sheet</button></div>
 <div id="saved"></div>
 <div class="card">
  <label>Customer name</label><input type="text" id="cust" autocapitalize="characters">
- <label>Country (optional)</label><div class="cwrap"><input type="text" id="country" placeholder="Search karo ya list se chuno" autocomplete="off" autocapitalize="words"><div id="clist" hidden></div></div>
+ <label>Country (optional)</label><div class="cwrap"><input type="text" id="country" placeholder="Search or pick from the list" autocomplete="off" autocapitalize="words"><div id="clist" hidden></div></div>
  <label>Date</label><input type="date" id="date">
 </div>
 <div id="styles"></div>
-<div id="empty" class="empty" hidden>Abhi koi style nahi hai. Neeche “Style jodo” dabao.</div>
-<button type="button" id="add">＋ Style jodo</button>
-<div id="bar"><div id="sum"></div><button id="go">Excel + PDF banao</button></div>
+<div id="empty" class="empty" hidden>No styles yet. Tap “Add style” below.</div>
+<button type="button" id="add">＋ Add style</button>
+<div id="bar"><div id="sum"></div><button id="go">Create Excel + PDF</button></div>
 <div id="msg"></div>
 </main>
 <div id="toast" hidden></div>
-<div id="dlg" hidden><div class="box"><b style="font-size:19px">Naya sheet banao?</b><p>Abhi ka saara data aur photos hat jayenge. Ye wapas nahi aayega.</p><div class="row"><button type="button" class="sec" id="dno" style="flex:1">Cancel</button><button type="button" class="sec danger" id="dyes" style="flex:1">Haan, naya banao</button></div></div></div>
+<div id="dlg" hidden><div class="box"><b style="font-size:19px">Start a new sheet?</b><p>All current data and photos will be deleted. This cannot be undone.</p><div class="row"><button type="button" class="sec" id="dno" style="flex:1">Cancel</button><button type="button" class="sec danger" id="dyes" style="flex:1">Yes, start new</button></div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js" onerror="var x=document.createElement('script');x.src='exceljs.min.js';document.head.appendChild(x)"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" onerror="var x=document.createElement('script');x.src='jspdf.umd.min.js';document.head.appendChild(x)"></script>
 <script>
-const KNOWN=['XS','S','M','L','XL','XXL','3XL','4XL','5XL'], DEFSZ=['S','M','L','XL'], rank=n=>{const i=KNOWN.indexOf(n);return i<0?99:i}, $=id=>document.getElementById(id);
+const KNOWN=['XS','S','M','L','XL','XXL','3XL','4XL','5XL'], DEFSZ=['S','M','L','XL'], COMBO=['S/M','M/L','L/XL'], rank=n=>{let i=KNOWN.indexOf(n);if(i>=0)return i;i=COMBO.indexOf(n);return i<0?99:20+i}, $=id=>document.getElementById(id);
 const today=()=>{const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)};
 let S={styles:[]}, ready=false;
 const newStyle=()=>({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6),name:'',code:'',sizes:DEFSZ.map(n=>({n,q:''})),same:false,sp:[],cp:[]});
@@ -144,7 +144,7 @@ let tm; function save(now){if(!ready)return;clearTimeout(tm);tm=setTimeout(doSav
 async function doSave(){
   const p=pack();
   try{await DB.set('state',p);$('saved').textContent='✓ Auto-saved'}
-  catch(e){try{p.styles.forEach(s=>{s.sp=[];s.cp=[]});localStorage.setItem('os_text',JSON.stringify(p));$('saved').textContent='✓ Saved (sirf text, photos nahi)'}catch(_){$('saved').textContent='Save nahi ho paya'}}
+  catch(e){try{p.styles.forEach(s=>{s.sp=[];s.cp=[]});localStorage.setItem('os_text',JSON.stringify(p));$('saved').textContent='✓ Saved (text only, no photos)'}catch(_){$('saved').textContent='Could not save'}}
 }
 let lastK=''; setInterval(()=>{const k=$('cust').value+'|'+$('country').value+'|'+$('date').value;if(k!==lastK){lastK=k;save()}},800);
 ['cust','date'].forEach(id=>$(id).addEventListener('input',()=>save()));
@@ -189,16 +189,16 @@ function render(){
 }
 function card(s,i){
   const d=document.createElement('div'); d.className='card sc'; d.dataset.id=s.id;
-  d.innerHTML=`<div class="sh"><span class="grip" title="Pakad ke upar-neeche karo">⠿</span><b>Style ${i+1}</b>
-  <button type="button" class="ib up" aria-label="Upar">▲</button><button type="button" class="ib dn" aria-label="Neeche">▼</button><button type="button" class="ib rm" aria-label="Style hatao">✕</button></div>
-  <label>Style name (jaise SKIRT + TOP SET)</label><input type="text" class="nm" autocapitalize="characters">
-  <label>Style code (jaise DHI0021)</label><input type="text" class="cd" autocapitalize="characters">
+  d.innerHTML=`<div class="sh"><span class="grip" title="Hold and drag to move up or down">⠿</span><b>Style ${i+1}</b>
+  <button type="button" class="ib up" aria-label="Move up">▲</button><button type="button" class="ib dn" aria-label="Move down">▼</button><button type="button" class="ib rm" aria-label="Remove style">✕</button></div>
+  <label>Style name (e.g. SKIRT + TOP SET)</label><input type="text" class="nm" autocapitalize="characters">
+  <label>Style code (e.g. DHI0021)</label><input type="text" class="cd" autocapitalize="characters">
   <label>Style picture</label><input type="file" accept="image/*" class="fsp"><div class="thumbs tsp"></div>
-  <label>Colors pictures (ek se zyada; dobara tap karke aur jod sakte ho)</label><input type="file" accept="image/*" multiple class="fcp"><div class="thumbs tcp"></div>
-  ${i>0?'<label class="same"><input type="checkbox" class="sm"> Pichhle style jaisi colors picture</label>':''}
-  <label>Quantity (size hatane ke liye ✕)</label><div class="sizes"></div>
-  <div class="addsz"><button type="button" class="sec bas">＋ Size jodo</button></div>
-  <div class="szform" hidden><div class="row"><input type="text" class="szn" placeholder="Custom size (jaise 4XL, 38, FREE)" autocapitalize="characters"><button type="button" class="sec szok">Add</button></div><div class="chips"></div></div>
+  <label>Color pictures (select several; tap again to add more)</label><input type="file" accept="image/*" multiple class="fcp"><div class="thumbs tcp"></div>
+  ${i>0?'<label class="same"><input type="checkbox" class="sm"> Same color picture as previous style</label>':''}
+  <label>Quantity (tap ✕ to remove a size)</label><div class="sizes"></div>
+  <div class="addsz"><button type="button" class="sec bas">＋ Add size</button></div>
+  <div class="szform" hidden><div class="row"><input type="text" class="szn" placeholder="Custom size (e.g. 4XL, 38, FREE)" autocapitalize="characters"><button type="button" class="sec szok">Add</button></div><div class="chips"></div></div>
   <div class="stot"></div>`;
   const Q=x=>d.querySelector(x), nm=Q('.nm'), cd=Q('.cd');
   nm.value=s.name; cd.value=s.code;
@@ -207,16 +207,16 @@ function card(s,i){
   const grid=Q('.sizes'), form=Q('.szform'), szn=Q('.szn'), chips=Q('.chips');
   const drawSizes=()=>{grid.innerHTML='';
     s.sizes.forEach((z,j)=>{const c=document.createElement('div'),h=document.createElement('div'),lb=document.createElement('span'),x=document.createElement('button'),inp=document.createElement('input');
-      h.className='szh';lb.textContent=z.n;x.type='button';x.className='szx';x.textContent='✕';x.setAttribute('aria-label',z.n+' hatao');
+      h.className='szh';lb.textContent=z.n;x.type='button';x.className='szx';x.textContent='✕';x.setAttribute('aria-label',z.n+' remove');
       x.onclick=()=>{s.sizes.splice(j,1);drawSizes();sums();save()};
       inp.type='number';inp.inputMode='numeric';inp.placeholder='0';inp.value=z.q;inp.oninput=()=>{z.q=inp.value;sums();save()};
       h.append(lb,x);c.append(h,inp);grid.append(c)});
-    if(!s.sizes.length){const e=document.createElement('div');e.className='cnt';e.style.gridColumn='1/-1';e.textContent='Koi size nahi - neeche se jodo';grid.append(e)}
+    if(!s.sizes.length){const e=document.createElement('div');e.className='cnt';e.style.gridColumn='1/-1';e.textContent='No sizes - add one below';grid.append(e)}
     chips.innerHTML='';
-    KNOWN.filter(n=>!s.sizes.some(z=>z.n===n)).forEach(n=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent='＋ '+n;b.onclick=()=>addSize(n);chips.append(b)});
+    KNOWN.concat(COMBO).filter(n=>!s.sizes.some(z=>z.n===n)).forEach(n=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent='＋ '+n;b.onclick=()=>addSize(n);chips.append(b)});
   };
   const addSize=n=>{n=(n||'').trim().toUpperCase().replace(/\s+/g,' ');if(!n)return;
-    if(s.sizes.some(z=>z.n===n)){toast(n+' pehle se hai');return}
+    if(s.sizes.some(z=>z.n===n)){toast(n+' is already added');return}
     s.sizes.push({n,q:''});s.sizes.sort((a,b)=>rank(a.n)-rank(b.n));szn.value='';drawSizes();sums();save()};
   Q('.bas').onclick=()=>{form.hidden=!form.hidden;if(!form.hidden)szn.focus()};
   Q('.szok').onclick=()=>addSize(szn.value);
@@ -236,7 +236,7 @@ function move(s,dir){const i=S.styles.indexOf(s),j=i+dir; if(j<0||j>=S.styles.le
   [S.styles[i],S.styles[j]]=[S.styles[j],S.styles[i]]; render(); save();
   const c=cardEl(s); c.scrollIntoView({block:'center',behavior:'smooth'}); c.classList.add('flash'); setTimeout(()=>c.classList.remove('flash'),700)}
 function remove(s){const i=S.styles.indexOf(s); S.styles.splice(i,1); render(); save();
-  toast('Style '+(i+1)+' hataya','Undo',()=>{S.styles.splice(Math.min(i,S.styles.length),0,s);render();save()})}
+  toast('Style '+(i+1)+' removed','Undo',()=>{S.styles.splice(Math.min(i,S.styles.length),0,s);render();save()})}
 $('add').onclick=()=>{const s=newStyle();S.styles.push(s);render();save();cardEl(s).scrollIntoView({block:'start',behavior:'smooth'})};
 
 // drag handle: neighbours are moved (not the card) so pointer capture is kept
@@ -269,7 +269,7 @@ function drag(d,g){
 $('newsheet').onclick=()=>{$('dlg').hidden=false};
 $('dno').onclick=()=>{$('dlg').hidden=true};
 $('dyes').onclick=()=>{$('dlg').hidden=true; $('cust').value='';$('country').value='';$('date').value=today();
-  S.styles=[newStyle()]; $('msg').innerHTML=''; render(); save(true); scrollTo({top:0,behavior:'smooth'}); toast('Naya sheet taiyar hai')};
+  S.styles=[newStyle()]; $('msg').innerHTML=''; render(); save(true); scrollTo({top:0,behavior:'smooth'}); toast('New sheet is ready')};
 
 // ---- load saved sheet on start ----
 (async()=>{
@@ -287,7 +287,7 @@ $('dyes').onclick=()=>{$('dlg').hidden=true; $('cust').value='';$('country').val
       s.cp=(await Promise.all((x.cp||[]).map(revive))).filter(Boolean);
       S.styles.push(s);
     }
-    if(S.styles.length) $('saved').textContent='✓ Pichhla sheet wapas aa gaya';
+    if(S.styles.length) $('saved').textContent='✓ Previous sheet restored';
   } else S.styles=[newStyle()];
   if(!$('date').value) $('date').value=today();
   lastK=$('cust').value+'|'+$('country').value+'|'+$('date').value;
@@ -330,7 +330,7 @@ const COUNTRIES=["Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Anti
     q=q.trim().toLowerCase();
     const a=COUNTRIES.filter(c=>c.toLowerCase().startsWith(q)), b=COUNTRIES.filter(c=>!c.toLowerCase().startsWith(q)&&c.toLowerCase().includes(q));
     const list=q?a.concat(b):COUNTRIES; box.innerHTML='';
-    if(!list.length){const d=document.createElement('div');d.className='none';d.textContent='Koi desh nahi mila';box.appendChild(d)}
+    if(!list.length){const d=document.createElement('div');d.className='none';d.textContent='No country found';box.appendChild(d)}
     list.forEach(c=>{const d=document.createElement('div');d.textContent=c;
       d.addEventListener('pointerdown',e=>{e.preventDefault();inp.value=c;box.hidden=true;inp.blur()});box.appendChild(d)});
     box.hidden=false;
@@ -345,10 +345,10 @@ const AH=Math.round(10*15.95*4/3)-3, SW=112, CW=366;
 
 async function collect(){
   const cust=$('cust').value.trim().toUpperCase();
-  if(!cust){toast('Customer ka naam likho');$('cust').focus();return null}
-  if(!S.styles.length){toast('Pehle kam se kam ek style jodo');return null}
+  if(!cust){toast('Enter the customer name');$('cust').focus();return null}
+  if(!S.styles.length){toast('Add at least one style first');return null}
   const L=[];S.styles.forEach(s=>s.sizes.forEach(z=>{if(!L.includes(z.n))L.push(z.n)}));L.sort((a,b)=>rank(a)-rank(b));
-  if(!L.length){toast('Kam se kam ek size rakho');return null}
+  if(!L.length){toast('Keep at least one size');return null}
   if(!$('date').value) $('date').value=today();
   const [y,m,d]=$('date').value.split('-'), styles=[]; let lastBuf=null;
   for(const [idx,s] of S.styles.entries()){
@@ -441,12 +441,12 @@ async function shareOrSave(blob,fname){
 }
 
 $('go').onclick=async()=>{
-  $('msg').textContent='File ban rahi hai...';
+  $('msg').textContent='Creating files...';
   try{
     const D=await collect(); if(!D){$('msg').textContent='';return}
     const xl=await buildXlsx(D), pdf=buildPdf(D), base=`${D.cust} ${D.dtxt}`;
-    $('msg').innerHTML='Taiyar hai! Neeche dabao:';
-    [['Excel save / share karo',xl,'.xlsx'],['PDF save / share karo',pdf,'.pdf']].forEach(([lab,bl,ext])=>{
+    $('msg').innerHTML='Ready! Tap below:';
+    [['Save / share Excel',xl,'.xlsx'],['Save / share PDF',pdf,'.pdf']].forEach(([lab,bl,ext])=>{
       const b=document.createElement('button'); b.textContent=lab; b.style.marginTop='8px'; b.onclick=()=>shareOrSave(bl,base+ext); $('msg').append(b)});
   }catch(e){$('msg').textContent='Error: '+(e.message||e)}
 };
