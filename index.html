@@ -108,8 +108,9 @@ button.bas{width:100%;flex:none}
 .szform .row input[type=text]{flex:1;min-width:0}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 button.chip{width:auto;min-height:0;padding:8px 14px;font-size:15px;font-weight:600;border-radius:20px;background:transparent;color:var(--ac);border:1.5px solid var(--ac)}
+.top{flex-wrap:wrap}.tb{display:flex;gap:8px;flex-wrap:wrap}
 </style></head><body><main>
-<div class="top"><h1>EzOrder Maker</h1><button type="button" class="ghost" id="newsheet">＋ New sheet</button></div>
+<div class="top"><h1>EzOrder Maker</h1><div class="tb"><button type="button" class="ghost" id="impbtn">⬆ Import Excel</button><button type="button" class="ghost" id="stbtn" aria-label="Print station address">⚙</button><button type="button" class="ghost" id="newsheet">＋ New sheet</button></div><input type="file" id="impfile" accept=".xlsx" hidden></div>
 <div id="saved"></div>
 <div class="card">
  <label>Customer name</label><input type="text" id="cust" autocapitalize="characters">
@@ -119,7 +120,7 @@ button.chip{width:auto;min-height:0;padding:8px 14px;font-size:15px;font-weight:
 <div id="styles"></div>
 <div id="empty" class="empty" hidden>No styles yet. Tap “Add style” below.</div>
 <button type="button" id="add">＋ Add style</button>
-<div id="bar"><div id="sum"></div><button id="go">Create Excel + PDF</button></div>
+<div id="bar"><div id="sum"></div><div class="row"><button id="go" style="flex:1">Create Excel + PDF</button><button id="prt" style="flex:1">🖨 Print</button></div></div>
 <div id="msg"></div>
 </main>
 <div id="toast" hidden></div>
@@ -266,6 +267,38 @@ function drag(d,g){
     step(); requestAnimationFrame(tick);
   });
 }
+
+// ---- import from Excel ----
+$('impbtn').onclick=()=>$('impfile').click();
+$('impfile').onchange=async e=>{
+  const f=e.target.files[0]; e.target.value=''; if(!f) return;
+  try{
+    const wb=new ExcelJS.Workbook(); await wb.xlsx.load(await f.arrayBuffer());
+    const ws=wb.worksheets[0], tx=(r,c)=>{const v=ws.getCell(r,c).value; if(v==null)return ''; return String(ws.getCell(r,c).text??v).trim()};
+    const blocks=[]; for(let r=1;r<=ws.rowCount;r++) if(tx(r,2).toUpperCase()==='STYLE') blocks.push(r);
+    if(!blocks.length){toast('No styles found in this Excel');return}
+    let cust='',country='',date='';
+    for(let r=1;r<blocks[0];r++){const t=tx(r,1); const m=/^(.*?)\s+(\d{2})-(\d{2})-(\d{4})$/.exec(t);
+      if(m){date=`${m[4]}-${m[3]}-${m[2]}`; cust=m[1]; const i=cust.lastIndexOf(' - ');
+        if(i>0){const c=cust.slice(i+3).trim(),hit=COUNTRIES.find(x=>x.toLowerCase()===c.toLowerCase()); if(hit){country=hit;cust=cust.slice(0,i).trim()}} break}}
+    const imgs=ws.getImages().map(im=>{const med=wb.getImage(im.imageId);return med?{row:Math.floor(im.range.tl.nativeRow)+1,col:Math.floor(im.range.tl.nativeCol),med}:null}).filter(Boolean);
+    const mk=async med=>{const ext=med.extension==='png'?'png':'jpeg';return readImg(new File([med.buffer],'i.'+ext,{type:'image/'+ext}))};
+    const out=[];
+    for(const r of blocks){
+      const s=newStyle(); s.sizes=[];
+      let tc=5; while(tc<60&&tx(r,tc).toLowerCase()!=='total'&&tx(r+1,tc)!=='') tc++;
+      for(let c=5;c<tc;c++){const n=tx(r+1,c).toUpperCase(); if(!n)continue; const q=ws.getCell(r+2,c).value; s.sizes.push({n,q:(typeof q==='number'&&q)?String(q):''})}
+      s.name=tx(r+1,4); s.code=tx(r+2,4).replace(/[()]/g,'').trim();
+      for(const im of imgs){ if(im.row>=r&&im.row<r+11){
+        const m=await mk(im.med); if(!m) continue;
+        if(im.col<=1) s.sp=[m]; else s.cp.push(m);}}
+      out.push(s);
+    }
+    $('cust').value=cust; $('country').value=country; $('date').value=date||today();
+    S.styles=out; $('msg').innerHTML=''; render(); save(true); scrollTo({top:0,behavior:'smooth'});
+    toast(out.length+' styles imported');
+  }catch(err){toast('Import failed: '+(err.message||err))}
+};
 
 // ---- new sheet ----
 $('newsheet').onclick=()=>{$('dlg').hidden=false};
@@ -441,6 +474,37 @@ async function shareOrSave(blob,fname){
   const u=URL.createObjectURL(blob), a=document.createElement('a'); a.href=u; a.download=fname;
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),60000);
 }
+
+// ---- direct print to the print station ----
+const stGet=()=>{try{return localStorage.getItem('station')||''}catch(_){return ''}};
+const stSet=v=>{try{localStorage.setItem('station',v)}catch(_){}};
+function stAsk(){
+  const v=prompt('Print station address (computer running print_station.py)',stGet()||'http://192.168.1.10:5000');
+  if(v===null) return stGet();
+  let u=v.trim().replace(/\/+$/,''); if(u&&!/^https?:\/\//i.test(u)) u='http://'+u;
+  stSet(u); return u;
+}
+$('stbtn').onclick=()=>{stAsk()};
+async function stSend(url,blob,name,pin){
+  const fd=new FormData(); fd.append('file',blob,name); fd.append('paper','A4'); fd.append('color','color'); fd.append('pin',pin||'');
+  return fetch(url+'/upload',{method:'POST',body:fd});
+}
+$('prt').onclick=async()=>{
+  if(!confirm('Are you sure you want to print?')) return;
+  let url=stGet()||stAsk(); if(!url) return;
+  const btn=$('prt'); btn.disabled=true; $('msg').textContent='Preparing PDF...';
+  try{
+    const D=await collect(); if(!D){$('msg').textContent='';btn.disabled=false;return}
+    const pdf=buildPdf(D), name=`${D.cust} ${D.dtxt}.pdf`;
+    $('msg').textContent='Sending to print station... (if this device is not trusted, approve on Telegram)';
+    let r=await stSend(url,pdf,name,'');
+    if(r.status===403){const t=await r.text(); if(/pin/i.test(t)){const p=prompt('Print station PIN'); if(p!==null) r=await stSend(url,pdf,name,p)}}
+    $('msg').textContent=await r.text();
+  }catch(e){
+    $('msg').textContent='Could not reach the print station at '+url+'. Check the address (tap ⚙), that Print Station is running, and that you are on the same Wi-Fi.';
+  }
+  btn.disabled=false;
+};
 
 $('go').onclick=async()=>{
   $('msg').textContent='Creating files...';
