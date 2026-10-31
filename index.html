@@ -110,7 +110,7 @@ button.bas{width:100%;flex:none}
 button.chip{width:auto;min-height:0;padding:8px 14px;font-size:15px;font-weight:600;border-radius:20px;background:transparent;color:var(--ac);border:1.5px solid var(--ac)}
 .top{flex-wrap:wrap}.tb{display:flex;gap:8px;flex-wrap:wrap}
 </style></head><body><main>
-<div class="top"><h1>EzOrder Maker</h1><div class="tb"><button type="button" class="ghost" id="impbtn">⬆ Import Excel</button><button type="button" class="ghost" id="stbtn" aria-label="Print station address">⚙</button><button type="button" class="ghost" id="newsheet">＋ New sheet</button></div><input type="file" id="impfile" accept=".xlsx" hidden></div>
+<div class="top"><h1>EzOrder Maker</h1><div class="tb"><button type="button" class="ghost" id="impbtn">⬆ Import Excel</button><button type="button" class="ghost" id="newsheet">＋ New sheet</button></div><input type="file" id="impfile" accept=".xlsx" hidden></div>
 <div id="saved"></div>
 <div class="card">
  <label>Customer name</label><input type="text" id="cust" autocapitalize="characters">
@@ -476,15 +476,17 @@ async function shareOrSave(blob,fname){
 }
 
 // ---- direct print to the print station ----
-const stGet=()=>{try{return localStorage.getItem('station')||''}catch(_){return ''}};
-const stSet=v=>{try{localStorage.setItem('station',v)}catch(_){}};
+const STATION_ENC='DQ4bSV9VQAhcSEEIU0JBCEtJWQNQSl8J', _k='ezo9';
+const _x=s=>Array.from(s,(c,i)=>String.fromCharCode(c.charCodeAt(0)^_k.charCodeAt(i%_k.length))).join('');
+const _enc=s=>btoa(_x(s)), _dec=s=>{try{return _x(atob(s))}catch(_){return ''}};
+const stGet=()=>{if(STATION_ENC)return _dec(STATION_ENC);try{return _dec(localStorage.getItem('st')||'')}catch(_){return ''}};
 function stAsk(){
-  const v=prompt('Print station address (computer running print_station.py)',stGet()||'http://192.168.1.10:5000');
-  if(v===null) return stGet();
+  const v=prompt('Print station address');
+  if(!v) return '';
   let u=v.trim().replace(/\/+$/,''); if(u&&!/^https?:\/\//i.test(u)) u='http://'+u;
-  stSet(u); return u;
+  try{localStorage.setItem('st',_enc(u))}catch(_){}
+  return u;
 }
-$('stbtn').onclick=()=>{stAsk()};
 async function stSend(url,blob,name,pin){
   const fd=new FormData(); fd.append('file',blob,name); fd.append('paper','A4'); fd.append('color','color'); fd.append('pin',pin||'');
   return fetch(url+'/upload',{method:'POST',body:fd});
@@ -501,7 +503,7 @@ $('prt').onclick=async()=>{
     if(r.status===403){const t=await r.text(); if(/pin/i.test(t)){const p=prompt('Print station PIN'); if(p!==null) r=await stSend(url,pdf,name,p)}}
     $('msg').textContent=await r.text();
   }catch(e){
-    $('msg').textContent='Could not reach the print station at '+url+'. Check the address (tap ⚙), that Print Station is running, and that you are on the same Wi-Fi.';
+    $('msg').textContent='Could not reach the print station. Check that Print Station is running and you are on the same Wi-Fi.';
   }
   btn.disabled=false;
 };
