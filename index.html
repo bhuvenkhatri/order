@@ -126,6 +126,25 @@ button.prp{display:block;width:76px;height:76px;min-height:0;padding:0;border:1.
 .pradd button{flex:1;width:auto}
 .pm .g3,.pm .g4{display:none}
 input.fpr{display:none!important}
+.prn{min-width:0}
+.psug{position:absolute;left:0;right:0;top:100%;margin-top:4px;max-height:230px;overflow-y:auto;-webkit-overflow-scrolling:touch;background:var(--card);border:1px solid var(--bd);border-radius:10px;z-index:25;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+.psug div{display:flex;align-items:center;gap:10px;padding:8px 10px;font-size:15px;font-weight:600;cursor:pointer;border-top:1px solid var(--bd)}
+.psug div:first-child{border-top:0}
+.psug .none{font-size:12px;font-weight:500;color:var(--mut);cursor:default}
+.psug .act,.psug div:not(.none):hover{background:var(--bd)}
+.psug img,.psug i{width:34px;height:34px;flex:none;border-radius:6px;object-fit:cover;background:var(--bg)}
+.thumbs img,.prp img{cursor:pointer}
+/* ===== adjust picture (zoom / move) ===== */
+#crop{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:70;padding:16px}
+#crop[hidden]{display:none}
+#crop .box{background:var(--card);border-radius:16px;padding:16px;max-width:460px;width:100%;box-sizing:border-box}
+#crop p{color:var(--mut);font-size:13px;margin:4px 0 10px}
+#cfr{position:relative;margin:0 auto;overflow:hidden;background:#fff;border:1px solid var(--bd);border-radius:10px;touch-action:none;cursor:grab}
+#cim{position:absolute;left:0;top:0;transform-origin:0 0;max-width:none;pointer-events:none;user-select:none;-webkit-user-select:none}
+.czr{display:flex;align-items:center;gap:10px;margin:12px 0}
+.czr input{flex:1;min-width:0}
+.czr button{width:44px;min-height:44px;height:44px;padding:0;flex:none!important;font-size:20px}
+#crop .row button{width:auto;min-height:44px;padding:10px;font-size:15px}
 .sizes.prq{grid-template-columns:repeat(auto-fill,minmax(58px,1fr))}
 .dzh,.dk,#keys,#wh{display:none}
 .addsz .stot{margin-top:10px}
@@ -262,7 +281,7 @@ input[type=checkbox]:focus-visible{outline:2px solid var(--ac);outline-offset:2p
 <aside id="side">
 <div class="top"><h1><span class="ez">Ez</span>Order Maker</h1><div class="tb"><button type="button" class="ghost" id="impbtn">⬆ Import Excel</button><button type="button" class="ghost" id="newsheet">＋ New sheet</button></div><input type="file" id="impfile" accept=".xlsx" hidden></div>
 <div id="saved"></div>
-<div id="keys"><span><i>Next field</i><em><kbd>Enter</kbd></em></span><span><i>Add style</i><em><kbd>Ctrl</kbd><kbd>+</kbd></em></span><span><i>Move style</i><em><kbd>Alt</kbd><kbd>↑↓</kbd></em></span><span><i>Previous field</i><em><kbd>Shift</kbd><kbd>Enter</kbd></em></span><span><i>Remove style</i><em><kbd>Alt</kbd><kbd>Del</kbd></em></span><span><i>Undo remove</i><em><kbd>Ctrl</kbd><kbd>Z</kbd></em></span><span><i>Add print</i><em><kbd>Alt</kbd><kbd>P</kbd></em></span><span><i>Remove size</i><em><kbd>Ctrl</kbd><kbd>Del</kbd></em></span><span><i>Create Excel + PDF</i><em><kbd>Ctrl</kbd><kbd>S</kbd></em></span><span><i>Print</i><em><kbd>Ctrl</kbd><kbd>P</kbd></em></span><span><i>Import Excel</i><em><kbd>Ctrl</kbd><kbd>O</kbd></em></span><span><i>Paste picture</i><em><kbd>Ctrl</kbd><kbd>V</kbd></em></span></div>
+<div id="keys"><span><i>Next field</i><em><kbd>Enter</kbd></em></span><span><i>Add style</i><em><kbd>Ctrl</kbd><kbd>+</kbd></em></span><span><i>Move style</i><em><kbd>Alt</kbd><kbd>↑↓</kbd></em></span><span><i>Previous field</i><em><kbd>Shift</kbd><kbd>Enter</kbd></em></span><span><i>Remove style</i><em><kbd>Alt</kbd><kbd>Del</kbd></em></span><span><i>Undo remove</i><em><kbd>Ctrl</kbd><kbd>Z</kbd></em></span><span><i>Add print</i><em><kbd>Alt</kbd><kbd>P</kbd></em></span><span><i>Remove size</i><em><kbd>Ctrl</kbd><kbd>Del</kbd></em></span><span><i>Create Excel + PDF</i><em><kbd>Ctrl</kbd><kbd>S</kbd></em></span><span><i>Print</i><em><kbd>Ctrl</kbd><kbd>P</kbd></em></span><span><i>Import Excel</i><em><kbd>Ctrl</kbd><kbd>O</kbd></em></span><span><i>Adjust picture</i><em><kbd>click it</kbd></em></span><span><i>Paste picture</i><em><kbd>Ctrl</kbd><kbd>V</kbd></em></span></div>
 <div class="card hdr">
  <div class="hf"><label>Customer name</label><input type="text" id="cust" autocapitalize="characters"></div>
  <div class="hf"><label>Country (optional)</label><div class="cwrap"><input type="text" id="country" placeholder="Search or pick from the list" autocomplete="off" autocapitalize="words"><div id="clist" tabindex="-1" hidden></div></div></div>
@@ -280,6 +299,7 @@ input[type=checkbox]:focus-visible{outline:2px solid var(--ac);outline-offset:2p
 <div id="msg"></div>
 </main>
 <div id="toast" hidden></div>
+<div id="crop" hidden><div class="box"><b style="font-size:18px">Adjust picture</b><p>Drag to move. Pinch, scroll or use the slider to zoom in and cut off the background.</p><div id="cfr"><img id="cim" alt="" draggable="false"></div><div class="czr"><button type="button" class="sec" id="czo" aria-label="Zoom out">−</button><input type="range" id="cz" min="1" max="6" step="0.01" value="1" aria-label="Zoom"><button type="button" class="sec" id="czi" aria-label="Zoom in">＋</button></div><div class="row"><button type="button" class="sec" id="cno" style="flex:1">Keep as is</button><button type="button" class="sec" id="cchg" style="flex:1">Change photo</button><button type="button" id="cok" style="flex:1">Save</button></div></div></div>
 <div id="dlg" hidden><div class="box"><b style="font-size:19px">Start a new sheet?</b><p>All current data and photos will be deleted. This cannot be undone.</p><div class="row"><button type="button" class="sec" id="dno" style="flex:1">Cancel</button><button type="button" class="sec danger" id="dyes" style="flex:1">Yes, start new</button></div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js" onerror="var x=document.createElement('script');x.src='exceljs.min.js';document.head.appendChild(x)"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" onerror="var x=document.createElement('script');x.src='jspdf.umd.min.js';document.head.appendChild(x)"></script>
@@ -298,7 +318,7 @@ const DB={
   async get(k){const d=await this.open();return new Promise((res,rej)=>{const q=d.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})},
   async set(k,v){const d=await this.open();return new Promise((res,rej)=>{const t=d.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=res;t.onerror=()=>rej(t.error)})}
 };
-const strip=m=>({blob:m.blob,w:m.w,h:m.h,ext:m.ext});
+const strip=m=>({blob:m.blob,w:m.w,h:m.h,ext:m.ext,sig:m.sig});
 const pack=()=>({v:1,mode:S.mode,cust:$('cust').value,country:$('country').value,date:$('date').value,
   styles:S.styles.map(s=>({id:s.id,name:s.name,code:s.code,note:s.note||'',sizes:s.sizes.map(z=>({n:z.n,q:z.q})),same:s.same,sp:s.sp.map(strip),cp:s.cp.map(strip),prints:(s.prints||[]).map(p=>({id:p.id,name:p.name,q:p.q,img:p.img?strip(p.img):null}))}))});
 let tm; function save(now){if(!ready)return;clearTimeout(tm);tm=setTimeout(doSave,now?0:150)}
@@ -324,30 +344,88 @@ function readImg(f){return new Promise(res=>{
     const w=im.naturalWidth, h=im.naturalHeight; let blob=f, ext=f.type==='image/png'?'png':'jpeg';
     if(f.type!=='image/jpeg'&&f.type!=='image/png'){const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(im,0,0);
       blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.95)); ext='jpeg'}
-    res({blob,w,h,ext,url,el:im});
+    let fp=''; try{const fc=document.createElement('canvas');fc.width=fc.height=4;const fx=fc.getContext('2d');fx.drawImage(im,0,0,4,4);
+      fp=[...fx.getImageData(0,0,4,4).data].filter((v,i)=>i%4!==3).map(v=>(v>>3).toString(32)).join('')}catch(_){}
+    res({blob,w,h,ext,url,el:im,sig:f.size+'|'+w+'|'+h+'|'+fp});   // sig = fingerprint used to recognise the same picture again
   };
   im.onerror=()=>res(null); im.src=url;});}
 const revive=m=>new Promise(res=>{const url=URL.createObjectURL(m.blob),im=new Image();im.onload=()=>res({...m,url,el:im});im.onerror=()=>res(null);im.src=url});
+// ---- one picture used in many places: updating it once updates every copy ----
+const samePic=(a,b)=>!!a&&!!b&&(a===b||(!!a.sig&&a.sig===b.sig));
+function replacePic(old,nw){let n=0;
+  S.styles.forEach(st=>{['sp','cp'].forEach(k=>{const a=st[k]; for(let i=0;i<a.length;i++)if(samePic(a[i],old)){a[i]=nw;n++}});
+    st.prints.forEach(q=>{if(samePic(q.img,old)){q.img=nw;n++}})});
+  return n}
+const picsUpdated=n=>{if(n>1){render();toast('Updated all '+n+' copies of this picture')}};
+// ---- adjust picture: zoom and move inside a frame, then save the visible part ----
+let cropKey=null;
+function cropUI(m,aspect,canChange){return new Promise(res=>{
+  const src=m.src||m, A=aspect||src.w/src.h, box=$('cfr'), img=$('cim');
+  const maxW=Math.min(innerWidth-66,420), maxH=Math.min(innerHeight*.5,420); let FW=maxW, FH=FW/A; if(FH>maxH){FH=maxH;FW=FH*A}
+  box.style.width=FW+'px'; box.style.height=FH+'px'; img.src=src.url;
+  const base=Math.min(FW/src.w,FH/src.h); let z=1, ox=0, oy=0;
+  const lay=()=>{const w=src.w*base*z,h=src.h*base*z,mx=Math.max(0,(w-FW)/2),my=Math.max(0,(h-FH)/2);
+    ox=Math.max(-mx,Math.min(mx,ox)); oy=Math.max(-my,Math.min(my,oy));
+    img.style.width=w+'px'; img.style.height=h+'px'; img.style.transform=`translate(${(FW-w)/2+ox}px,${(FH-h)/2+oy}px)`; $('cz').value=z};
+  const setZ=(nz,cx,cy)=>{nz=Math.max(1,Math.min(6,nz)); if(cx==null){cx=FW/2;cy=FH/2}
+    const w0=src.w*base*z,h0=src.h*base*z,px=(cx-((FW-w0)/2+ox))/w0,py=(cy-((FH-h0)/2+oy))/h0; z=nz;
+    const w=src.w*base*z,h=src.h*base*z; ox=cx-px*w-(FW-w)/2; oy=cy-py*h-(FH-h)/2; lay()};
+  const pts=new Map(); let pd=0;
+  box.onpointerdown=e=>{e.preventDefault();try{box.setPointerCapture(e.pointerId)}catch(_){} pts.set(e.pointerId,{x:e.clientX,y:e.clientY}); pd=0};
+  box.onpointermove=e=>{const p=pts.get(e.pointerId); if(!p)return; const dx=e.clientX-p.x,dy=e.clientY-p.y; p.x=e.clientX; p.y=e.clientY;
+    if(pts.size===1){ox+=dx;oy+=dy;lay()}
+    else if(pts.size===2){const [a,b]=[...pts.values()],d=Math.hypot(a.x-b.x,a.y-b.y),r=box.getBoundingClientRect(); if(pd)setZ(z*d/pd,(a.x+b.x)/2-r.left,(a.y+b.y)/2-r.top); pd=d}};
+  box.onpointerup=box.onpointercancel=e=>{pts.delete(e.pointerId);pd=0};
+  box.onwheel=e=>{e.preventDefault();const r=box.getBoundingClientRect();setZ(z*(e.deltaY<0?1.1:1/1.1),e.clientX-r.left,e.clientY-r.top)};
+  $('cz').oninput=()=>setZ(+$('cz').value); $('czi').onclick=()=>setZ(z*1.15); $('czo').onclick=()=>setZ(z/1.15);
+  const done=v=>{$('crop').hidden=true; cropKey=null; res(v)};
+  $('cno').onclick=()=>done(null);
+  $('cchg').hidden=!canChange; $('cchg').onclick=()=>done({change:true});
+  $('cok').onclick=async()=>{
+    const w=src.w*base*z,h=src.h*base*z,ix=(FW-w)/2+ox,iy=(FH-h)/2+oy,R=Math.min(src.w/w,1600/FW);
+    const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(FW*R)); c.height=Math.max(1,Math.round(FH*R));
+    const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); x.imageSmoothingQuality='high'; x.drawImage(src.el,ix*R,iy*R,w*R,h*R);
+    const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.92)), nm=blob?await readImg(new File([blob],'c.jpg',{type:'image/jpeg'})):null;
+    if(nm){nm.src=src; nm.sig=src.sig} done(nm)};
+  cropKey=e=>{const k=e.key;
+    if(k==='Escape'){e.preventDefault();done(null)}
+    else if(k==='Enter'&&e.target.tagName!=='BUTTON'){e.preventDefault();$('cok').click()}
+    else if(k==='+'||k==='='){e.preventDefault();setZ(z*1.15)}
+    else if(k==='-'){e.preventDefault();setZ(z/1.15)}
+    else if(k.startsWith('Arrow')&&e.target.id!=='cz'){e.preventDefault();const d=k==='ArrowLeft'?[-14,0]:k==='ArrowRight'?[14,0]:k==='ArrowUp'?[0,-14]:[0,14];ox+=d[0];oy+=d[1];lay()}};
+  lay(); $('crop').hidden=false; if(innerWidth>900)$('cok').focus();
+})}
 function thumbs(box,arr){box.innerHTML='';const dz=box.closest('.dz');if(dz)dz.classList.toggle('has',arr.length>0);
-  arr.forEach((m,j)=>{const w=document.createElement('div');w.className='th';const im=document.createElement('img');im.src=m.url;im.draggable=false;
+  arr.forEach((m,j)=>{const w=document.createElement('div');w.className='th';const im=document.createElement('img');im.src=m.url;im.draggable=false;im.title='Click to zoom or move';
+    im.onclick=async()=>{const c=await cropUI(m,null); if(c&&!c.change){const n=replacePic(m,c); if(n>1)picsUpdated(n); else {arr[j]=c;thumbs(box,arr)} save()}};
     const x=document.createElement('i');x.textContent='✕';x.onclick=()=>{arr.splice(j,1);thumbs(box,arr);save()};w.append(im,x);box.append(w)});
   if(arr.length>1){const c=document.createElement('div');c.className='cnt';c.textContent=arr.length+' photos';box.append(c)}}
 async function addFiles(fs,s,key,single){
   fs=[...fs].filter(f=>!f.type||f.type.startsWith('image/')); if(!fs.length) return;
   if(single) fs=fs.slice(0,1);
   const got=[]; for(const f of fs){const m=await readImg(f); if(m) got.push(m)}
+  if(single&&got[0]){const c=await cropUI(got[0],null); if(c&&!c.change)got[0]=c}
   if(!got.length){toast('That file is not a picture');return}
   if(single) s[key]=got; else s[key].push(...got);
   const c=cardEl(s); if(c) thumbs(c.querySelector(key==='sp'?'.tsp':'.tcp'),s[key]); save();
 }
 // print-wise: one print per picture, or set the photo of one print
+const redrawPrints=()=>document.querySelectorAll('.sc').forEach(c=>{if(c._dp)c._dp()});
+const allPrints=()=>S.styles.flatMap(st=>st.prints);
 async function addPrints(s,fs,pr){
   fs=[...fs].filter(f=>!f.type||f.type.startsWith('image/')); if(!fs.length) return;
-  let ok=0;
-  if(pr){const m=await readImg(fs[0]); if(m){pr.img=m;ok=1}}
-  else for(const f of fs){const m=await readImg(f); if(m){s.prints.push(newPrint(m));ok++}}
-  if(!ok){toast('That file is not a picture');return}
-  const c=cardEl(s); if(c&&c._dp)c._dp(); sums(); save();
+  const fresh=[];
+  let nrep=0;
+  if(pr){let m=await readImg(fs[0]); if(m){const c=await cropUI(m,1); if(c&&!c.change)m=c; const old=pr.img; if(old)nrep=replacePic(old,m); pr.img=m; fresh.push(pr)}}
+  else for(const f of fs){let m=await readImg(f); if(!m)continue;
+    if(fs.length===1){const c=await cropUI(m,1); if(c&&!c.change)m=c}
+    const np=newPrint(m); s.prints.push(np); fresh.push(np)}
+  if(!fresh.length){toast('That file is not a picture');return}
+  if(nrep>1)picsUpdated(nrep); else {const c=cardEl(s); if(c&&c._dp)c._dp()} sums(); save();
+  // same picture as a print already used? offer to reuse that print
+  const hits=fresh.filter(p=>!p.name.trim()).map(p=>({p,k:allPrints().find(q=>q!==p&&q.name.trim()&&q.img&&q.img.sig&&q.img.sig===p.img.sig)})).filter(h=>h.k);
+  if(hits.length)toast(hits.length===1?'Same picture as "'+hits[0].k.name.trim()+'". Use that print?':hits.length+' pictures match prints already used. Use them?','Use',()=>{
+    hits.forEach(h=>{h.p.name=h.k.name.trim(); h.p.img=h.k.img}); redrawPrints(); sums(); save()});
 }
 function pick(e,s,key,box,single){const fs=[...e.target.files]; e.target.value=''; return addFiles(fs,s,key,single)}
 const hasFiles=e=>e.dataTransfer&&[...e.dataTransfer.types].includes('Files');
@@ -453,7 +531,7 @@ function card(s,i){
     Q('.cg').after(pw); pw.querySelector('.pwa').append(Q('.addsz'),Q('.szform'));
     const pszs=pw.querySelector('.pszs'), prs=pw.querySelector('.prs'), fpr=pw.querySelector('.fpr'); let pickFor=null;
     fpr.onchange=e=>{const fs=[...e.target.files]; e.target.value=''; addPrints(s,fs,pickFor); pickFor=null};
-    pw.querySelector('.bap').onclick=()=>{s.prints.push(newPrint()); drawP(); sums(); save(); const n=prs.querySelectorAll('.prn'); if(innerWidth>900)n[n.length-1].focus()};
+    pw.querySelector('.bap').onclick=()=>{s.prints.push(newPrint()); drawP(); sums(); save(); const n=prs.querySelectorAll('.prni'); if(innerWidth>900)n[n.length-1].focus()};
     pw.querySelector('.baf').onclick=()=>{pickFor=null; fpr.multiple=true; fpr.click()};
     drawP=()=>{
       pszs.innerHTML='';
@@ -467,8 +545,30 @@ function card(s,i){
         const row=document.createElement('div'), ph=document.createElement('button'), nm=document.createElement('input'), x=document.createElement('button'), qs=document.createElement('div'), tt=document.createElement('div');
         row.className='pr'; ph.type='button'; ph.className='prp'; ph.setAttribute('aria-label','Print '+(pi+1)+' photo');
         if(pr.img){const im=document.createElement('img'); im.src=pr.img.url; im.draggable=false; im.alt=''; ph.append(im)} else ph.textContent='＋ Photo';
-        ph.onclick=()=>{pickFor=pr; fpr.multiple=false; fpr.click()};
-        nm.type='text'; nm.className='prn'; nm.placeholder='Print name / code'; nm.setAttribute('autocapitalize','characters'); nm.value=pr.name; nm.oninput=()=>{pr.name=nm.value;save()};
+        ph.onclick=async()=>{
+          if(!pr.img){pickFor=pr; fpr.multiple=false; fpr.click(); return}
+          const c=await cropUI(pr.img,1,true);
+          if(c&&c.change){pickFor=pr; fpr.multiple=false; fpr.click()}
+          else if(c){const n=replacePic(pr.img,c); if(n>1)picsUpdated(n); else redrawPrints(); save()}};
+        const wrap=document.createElement('div'), sg=document.createElement('div'); wrap.className='cwrap prn'; sg.className='psug'; sg.hidden=true; wrap.append(nm,sg);
+        nm.type='text'; nm.className='prni'; nm.placeholder='Print name / code'; nm.setAttribute('autocapitalize','characters'); nm.setAttribute('autocomplete','off'); nm.value=pr.name;
+        // suggest prints already used in this sheet with a matching name
+        const usePrint=k=>{pr.name=k.name.trim(); if(k.img)pr.img=k.img; sg.hidden=true; drawP(); sums(); save(); const ni=prs.querySelectorAll('.prni')[pi]; if(ni&&innerWidth>900)ni.focus()};
+        const showSug=()=>{const q=nm.value.trim().toUpperCase(), best=new Map();
+          if(q)allPrints().forEach(k=>{const n=k.name.trim().toUpperCase(); if(k===pr||!n||!n.includes(q))return; if(n===q&&(k.img===pr.img||!k.img))return; if(!best.has(n)||(!best.get(n).img&&k.img))best.set(n,k)});
+          sg.innerHTML=''; if(!best.size){sg.hidden=true;return}
+          const h=document.createElement('div'); h.className='none'; h.textContent='Are you talking about this print?'; sg.append(h);
+          [...best.values()].sort((a,b)=>(b.name.trim().toUpperCase()===q)-(a.name.trim().toUpperCase()===q)).slice(0,8).forEach(k=>{const it=document.createElement('div');
+            if(k.img){const im=document.createElement('img'); im.src=k.img.url; im.alt=''; it.append(im)} else it.append(document.createElement('i'));
+            it.append(k.name.trim().toUpperCase()); it.addEventListener('pointerdown',e=>{e.preventDefault();usePrint(k)}); it._k=k; sg.append(it)});
+          sg.hidden=false};
+        nm.oninput=()=>{pr.name=nm.value;save();showSug()};
+        nm.onblur=()=>setTimeout(()=>{sg.hidden=true},150);
+        nm.onkeydown=e=>{ if(sg.hidden)return;
+          const it=[...sg.querySelectorAll('div:not(.none)')]; let i=it.findIndex(d=>d.classList.contains('act'));
+          if(e.key==='Escape'){sg.hidden=true;e.stopPropagation()}
+          else if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault(); if(i>=0)it[i].classList.remove('act'); i=e.key==='ArrowDown'?(i+1)%it.length:(i<=0?it.length-1:i-1); it[i].classList.add('act'); it[i].scrollIntoView({block:'nearest'})}
+          else if(e.key==='Enter'&&i>=0&&!e.shiftKey){e.preventDefault();e.stopPropagation();usePrint(it[i]._k)}};
         x.type='button'; x.className='ib rm prx'; x.textContent='✕'; x.setAttribute('aria-label','Remove print '+(pi+1));
         x.onclick=()=>{s.prints.splice(pi,1); drawP(); sums(); save();
           toast('Print removed'+(innerWidth>900?' · Ctrl+Z to undo':''),'Undo',()=>{s.prints.splice(Math.min(pi,s.prints.length),0,pr); const c=cardEl(s); if(c&&c._dp)c._dp(); sums(); save()})};
@@ -484,7 +584,7 @@ function card(s,i){
         row.addEventListener('dragover',e=>{if(!hasFiles(e))return;e.preventDefault();e.stopPropagation();row.classList.add('over')});
         row.addEventListener('dragleave',e=>{if(!row.contains(e.relatedTarget))row.classList.remove('over')});
         row.addEventListener('drop',e=>{if(!hasFiles(e))return;e.preventDefault();e.stopPropagation();row.classList.remove('over');addPrints(s,e.dataTransfer.files,pr)});
-        row.append(ph,nm,x,qs,tt); prs.append(row)});
+        row.append(ph,wrap,x,qs,tt); prs.append(row)});
     };
     d._dp=drawP; drawP();
   }
@@ -562,6 +662,22 @@ async function importFile(f){
     const out=[]; let impMode='std';
     for(const r of blocks){
       const s=newStyle(); s.sizes=[];
+      if(tx(r,4).toUpperCase()==='SIZE'||tx(r,3).toUpperCase()==='SIZE'){
+        const SC=tx(r,4).toUpperCase()==='SIZE'?4:3, DC=7-SC;
+        impMode='print';
+        let tc=5; while(tc<80&&tx(r,tc).toLowerCase()!=='total') tc++;
+        for(let c=5;c<tc;c++){const pr=newPrint(); pr.name=tx(r+2,c); s.prints.push(pr)}
+        let N=0; for(let k=3;k<60;k++){const n=tx(r+k,SC).toUpperCase(); if(!n||n==='TOTAL')break; s.sizes.push({n,q:''}); N++;
+          s.prints.forEach((pr,i)=>{const q=ws.getCell(r+k,5+i).value; if(typeof q==='number'&&q)pr.q[n]=String(q)})}
+        const L=String(ws.getCell(r+1,DC).text??'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean), ci=L.findIndex(x=>/^\(.*\)$/.test(x));
+        if(ci>=0){s.name=L.slice(0,ci).join(' ');s.code=L[ci].replace(/[()]/g,'').trim();s.note=L.slice(ci+1).join(' ')} else {s.name=L[0]||'';s.note=L.slice(1).join(' ')}
+        {const top=String(ws.getCell(r+1,DC).text??'').trim(), nt=String(ws.getCell(r+3,DC).text??'').trim(); if(nt&&nt!==top)s.note=nt.replace(/\s*\n\s*/g,' ')}
+        for(const im of imgs){ if(im.row>r&&im.row<=r+N+4){ const m=await mk(im.med); if(!m)continue;
+          if(im.col<=1)s.sp=[m]; else if(im.row===r+1&&s.prints[im.col-4])s.prints[im.col-4].img=m }}
+        s.prints=s.prints.filter(q=>q.img||q.name||Object.keys(q.q).length);
+        if(s.name.endsWith(CONT)&&out.length){out[out.length-1].prints.push(...s.prints)} else out.push(s);
+        continue;
+      }
       if(tx(r,3).toUpperCase()==='PRINTS'){
         impMode='print';
         for(let c=5;c<60;c++){const n=tx(r,c).toUpperCase(); if(!n||n==='TOTAL')break; s.sizes.push({n,q:''})}
@@ -708,121 +824,124 @@ function descLines(s,fit){
   return out.slice(0,6);
 }
 
-const PMAX=14, CONT=' (CONT.)';
+const PMAX=10, CONT=' (CONT.)', PT=60; // prints per block, thumbnail px
+// print-wise sheet: prints run ACROSS (small photo + name on top), sizes run DOWN
+const pwChars=mc=>[2.7,15.4,Math.max(10,Math.min(22,83.9-mc*9.5)),7,...Array(mc).fill(9.5),6]; // description shrinks to make room for prints
 async function collectP(){
   const cust=$('cust').value.trim().toUpperCase();
   if(!cust){toast('Enter the customer name');$('cust').focus();return null}
   if(!S.styles.length){toast('Add at least one style first');return null}
-  const m=Math.max(0,...S.styles.map(s=>s.sizes.length));
-  if(!m){toast('Keep at least one size');return null}
+  if(!Math.max(0,...S.styles.map(s=>s.sizes.length))){toast('Keep at least one size');return null}
   if(!$('date').value) $('date').value=today();
-  const [y,mo,d]=$('date').value.split('-'), styles=[];
-  let no=0;
+  const [y,mo,d]=$('date').value.split('-'), styles=[]; let no=0;
   for(const s of S.styles){
     no++;
-    const zs=[...s.sizes].sort((a,b)=>rank(a.n)-rank(b.n)), labels=zs.map(z=>z.n);
+    const zs=[...s.sizes].sort((a,b)=>rank(a.n)-rank(b.n)), labels=zs.map(z=>z.n), N=Math.max(1,labels.length);
     let src=s.prints.filter(p=>p.img||p.name.trim()||labels.some(n=>+p.q[n])); if(!src.length)src=[newPrint()];
-    // a style with many prints is split into parts that each fit on one page
     const parts=Math.ceil(src.length/PMAX), per=Math.ceil(src.length/parts), so=s.sp[0]||null, sobuf=so?await so.blob.arrayBuffer():null;
+    const sb=so?await compose([so],SW,Math.round((48+24+N*15.95+15.95)*4/3)-3,6,'inset'):null;
     for(let ci=0;ci<parts;ci++){
-      const part=src.slice(ci*per,(ci+1)*per), P=part.length, hp=P===1?150:P===2?75:58, pxh=Math.round(hp*4/3), T=Math.min(pxh-6,190), rows=[];
-      for(const p of part){const q=labels.map(n=>+p.q[n]||0);
-        rows.push({name:p.name.trim().toUpperCase(),q,tot:q.reduce((a,b)=>a+b,0),th:p.img?await compose([p.img],T,T,1,false):null})}
-      styles.push({no,labels,rows,P,hp,T,name:s.name.trim().toUpperCase()+(ci?CONT:''),code:s.code.trim().replace(/[()]/g,'').toUpperCase(),note:(s.note||'').trim(),
-        so:so?{buf:sobuf,w:so.w,h:so.h,ext:so.ext}:null,
-        sb:so?await compose([so],SW,P*pxh-3,6,'inset'):null,
-        col:labels.map((n,j)=>rows.reduce((a,r)=>a+r.q[j],0)), tot:rows.reduce((a,r)=>a+r.tot,0)});
+      const prints=[];
+      for(const p of src.slice(ci*per,(ci+1)*per)){const q=labels.map(n=>+p.q[n]||0);
+        prints.push({name:p.name.trim().toUpperCase(),q,tot:q.reduce((a,b)=>a+b,0),th:p.img?await compose([p.img],PT,PT,1,false):null})}
+      styles.push({no,labels,prints,name:s.name.trim().toUpperCase()+(ci?CONT:''),code:s.code.trim().replace(/[()]/g,'').toUpperCase(),note:(s.note||'').trim(),
+        so:so?{buf:sobuf,w:so.w,h:so.h,ext:so.ext}:null, sb,
+        row:labels.map((n,j)=>prints.reduce((a,p)=>a+p.q[j],0)), tot:prints.reduce((a,p)=>a+p.tot,0)});
     }
   }
-  const cw=Array.from({length:m},(_,j)=>Math.max(4.5,...styles.map(s=>s.labels[j]?s.labels[j].length*1.3+1.5:0)));
   const country=$('country').value.trim().toUpperCase();
-  return {mode:'print',cust:country?cust+' - '+country:cust,dtxt:`${d}-${mo}-${y}`,styles,m,cw,grand:styles.reduce((a,s)=>a+s.tot,0)};
+  return {mode:'print',cust:country?cust+' - '+country:cust,dtxt:`${d}-${mo}-${y}`,styles,mc:Math.max(6,...styles.map(s=>s.prints.length)),grand:styles.reduce((a,s)=>a+s.tot,0)};
 }
 
 async function buildXlsxP(D){
-  const m=D.m, TC=5+m, wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('ORDER SHEET');
-  const col=n=>ws.getColumn(n).letter, scale=m>5?Math.max(40,80-(m-5)*3):80;
-  ws.columns=[2.7,15.4,52.6,19.3,...D.cw,5.4].map(w=>({width:w}));
+  const mc=D.mc, TC=5+mc, wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('ORDER SHEET');
+  const col=n=>ws.getColumn(n).letter, W=pwChars(mc), scale=Math.max(40,Math.min(80,Math.floor(80*115/W.reduce((a,b)=>a+b))));
+  ws.columns=W.map(w=>({width:w}));
   ws.pageSetup={paperSize:9,orientation:'portrait',scale,horizontalCentered:true,margins:{left:.4,right:.4,top:.3,bottom:.3,header:.1,footer:.1}};
   ws.getRow(2).height=20.25; ws.mergeCells(2,1,2,TC);
   const t=ws.getCell('A2'); t.value=`${D.cust} ${D.dtxt}`; t.font={bold:true,size:14}; t.alignment={horizontal:'center',vertical:'middle'};
   for(let c=1;c<=TC;c++) ws.getCell(2,c).border=border;
   const put=(r,c,v,o={})=>{const x=ws.getCell(r,c);x.value=v;x.alignment={horizontal:o.h||'center',vertical:o.v||'middle'};if(o.b)x.font={bold:true};return x};
-  const RH=15.95, avail=(841.9-.6*72)/(scale/100); let r=FIRST, used=50, prevSep=0; const totCells=[];
-  D.styles.forEach((s,idx)=>{
-    const P=s.P, bh=RH+P*s.hp+RH+6.75;
-    if(prevSep&&used+bh>avail){ws.getRow(prevSep).addPageBreak();used=0}
+  const RH=15.95, PH=48, NH=24, avail=(841.9-.6*72)/(scale/100), off=(1-PT/(9.5*7+5))/2; let r=FIRST, used=50, prevSep=0, pb=0; const totCells=[];
+  D.styles.forEach(s=>{
+    const N=s.labels.length, last=r+3+N, bh=RH+PH+NH+N*RH+RH+6.75;   // r header, r+1 photos, r+2 names, r+3.. sizes, last = TOTAL
+    if(prevSep&&used+bh>avail){ws.getRow(prevSep).addPageBreak();used=0;pb++}
     used+=bh;
-    for(let k=0;k<=P+1;k++){ws.getRow(r+k).height=(k===0||k===P+1)?RH:s.hp; for(let c=1;c<=TC;c++)ws.getCell(r+k,c).border=border}
-    ws.getRow(r+P+2).height=6.75;
-    for(let c=1;c<=TC;c++) ws.getCell(r+P+2,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFC000'}};
-    put(r,1,s.no); put(r,2,'STYLE'); put(r,3,'PRINTS'); put(r,4,'Description',{h:'left'}); put(r,TC,'Total');
-    s.labels.forEach((lab,j)=>put(r,5+j,lab,{b:1}));
-    if(P>1)[1,2,4].forEach(c=>ws.mergeCells(r+1,c,r+P,c));
-    const dc=ws.getCell(r+1,4); dc.value=[s.name,s.code?`(${s.code})`:'',s.note].filter(Boolean).join('\n'); dc.font={bold:true}; dc.alignment={horizontal:'left',vertical:'top',wrapText:true};
-    const ind=Math.min(15,Math.ceil((s.T+10)/21));
-    s.rows.forEach((pr,k)=>{const rr=r+1+k;
-      const nc=ws.getCell(rr,3); nc.value=pr.name; nc.font={bold:true}; nc.alignment={horizontal:'left',vertical:'middle',wrapText:true,indent:ind};
-      s.labels.forEach((lab,j)=>{if(pr.q[j])put(rr,5+j,pr.q[j],{b:1})});
-      put(rr,TC,{formula:`SUM(${col(5)}${rr}:${col(TC-1)}${rr})`,result:pr.tot},{b:1});
-      if(pr.th){const id=wb.addImage({buffer:pr.th,extension:'jpeg'}); ws.addImage(id,{tl:{col:2.02,row:rr-1+.04},ext:{width:s.T,height:s.T},editAs:'oneCell'})}
-    });
-    const tr=r+P+1; put(tr,4,'TOTAL',{h:'right',b:1});
-    s.labels.forEach((lab,j)=>{const c=5+j, L=col(c); const x=put(tr,c,{formula:`SUM(${L}${r+1}:${L}${r+P})`,result:s.col[j]}); x.font={color:{argb:'FFFF0000'},size:9}});
-    put(tr,TC,{formula:`SUM(${col(TC)}${r+1}:${col(TC)}${r+P})`,result:s.tot},{b:1}); totCells.push(col(TC)+tr);
-    if(s.sb){const id=wb.addImage({buffer:s.sb,extension:'png'}); ws.addImage(id,{tl:{col:1,row:r},br:{col:2,row:r+P},editAs:'twoCell'})}
-    prevSep=r+P+2; r+=P+3;
+    for(let k=r;k<=last;k++){ws.getRow(k).height=k===r+1?PH:k===r+2?NH:RH; for(let c=1;c<=TC;c++)ws.getCell(k,c).border=border}
+    ws.getRow(last+1).height=6.75;
+    for(let c=1;c<=TC;c++) ws.getCell(last+1,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFC000'}};
+    put(r,1,s.no); put(r,2,'STYLE'); put(r,3,'Description',{h:'left'}); put(r,4,'SIZE'); put(r,5,'PRINTS'); put(r,TC,'Total');
+    ws.mergeCells(r,5,r,4+mc);
+    [1,2].forEach(c=>ws.mergeCells(r+1,c,last,c)); ws.mergeCells(r+1,4,r+2,4); ws.mergeCells(r+1,TC,r+2,TC);
+    if(s.note){ws.mergeCells(r+1,3,r+2,3); ws.mergeCells(r+3,3,last,3);
+      const nt=ws.getCell(r+3,3); nt.value=s.note; nt.font={bold:true}; nt.alignment={horizontal:'left',vertical:'top',wrapText:true};
+      for(let k=r+3;k<=last;k++)ws.getCell(k,3).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFF00'}}}
+    else ws.mergeCells(r+1,3,last,3);
+    const dc=ws.getCell(r+1,3); dc.value=[s.name,s.code?`(${s.code})`:''].filter(Boolean).join('\n'); dc.font={bold:true}; dc.alignment={horizontal:'left',vertical:'top',wrapText:true};
+    s.prints.forEach((pr,k)=>{const c=5+k, L=col(c);
+      if(pr.th){const id=wb.addImage({buffer:pr.th,extension:'jpeg'}); ws.addImage(id,{tl:{col:c-1+off,row:r+.04},ext:{width:PT,height:PT},editAs:'oneCell'})}
+      const nc=ws.getCell(r+2,c); nc.value=pr.name; nc.font={bold:true,size:8}; nc.alignment={horizontal:'center',vertical:'middle',wrapText:true};
+      s.labels.forEach((lab,j)=>{put(r+3+j,c,pr.q[j]||'-',{b:1})});
+      const x=put(last,c,{formula:`SUM(${L}${r+3}:${L}${last-1})`,result:pr.tot}); x.font={color:{argb:'FFFF0000'},size:9}});
+    s.labels.forEach((lab,j)=>{const rr=r+3+j; put(rr,4,lab,{b:1}); put(rr,TC,{formula:`SUM(${col(5)}${rr}:${col(4+mc)}${rr})`,result:s.row[j]},{b:1})});
+    put(last,4,'TOTAL',{b:1});
+    put(last,TC,{formula:`SUM(${col(TC)}${r+3}:${col(TC)}${last-1})`,result:s.tot},{b:1}); totCells.push(col(TC)+last);
+    if(s.sb){const id=wb.addImage({buffer:s.sb,extension:'png'}); ws.addImage(id,{tl:{col:1,row:r},br:{col:2,row:last},editAs:'twoCell'})}
+    prevSep=last+1; r=last+2;
   });
   const gr=r+1;
-  ws.getCell(gr,4).value='GRAND TOTAL'; ws.getCell(gr,4).font={bold:true};
-  if(m>1)ws.mergeCells(gr,5,gr,4+m);
+  ws.getCell(gr,3).value='GRAND TOTAL'; ws.getCell(gr,3).font={bold:true}; ws.getCell(gr,3).alignment={horizontal:'right'};
+  ws.mergeCells(gr,5,gr,4+mc);
   const g=ws.getCell(gr,5); g.value={formula:totCells.join('+'),result:D.grand};
   g.font={bold:true}; g.alignment={horizontal:'center'};
   ws.pageSetup.printArea=`A1:${col(TC)}${gr}`;
+  if(pb)ws.headerFooter.oddFooter='&C&8Page &P of &N';
   return new Blob([await wb.xlsx.writeBuffer()],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
 
 function buildPdfP(D){
-  const {jsPDF}=window.jspdf, doc=new jsPDF({unit:'pt',format:'a4'}), m=D.m;
-  const M=22, PW=595-2*M, chars=[2.7,15.4,52.6,19.3,...D.cw,5.4], sum=chars.reduce((a,b)=>a+b);
+  const {jsPDF}=window.jspdf, doc=new jsPDF({unit:'pt',format:'a4'}), mc=D.mc;
+  const M=22, PW=595-2*M, chars=pwChars(mc), sum=chars.reduce((a,b)=>a+b);
   const X=[M]; chars.forEach(c=>X.push(X[X.length-1]+c/sum*PW));
-  const TH=24, GAP=5, RH=13, nc=chars.length, TC=nc-1, BOT=842-M;
+  const TH=24, GAP=5, RH=13, PH=40, NH=17, nc=chars.length, TC=nc-1, BOT=842-M, P0=4;   // P0 = first print column
   const T=(s,x,y,o={})=>{doc.setFont('helvetica',o.b?'bold':'normal');doc.setFontSize(o.sz||8);doc.setTextColor(...(o.c||[0,0,0]));doc.text(String(s),x,y,{align:o.a||'center',baseline:'middle'})};
   const mid=c=>(X[c]+X[c+1])/2, line=(x1,y1,x2,y2)=>doc.line(x1,y1,x2,y2);
-  const fitW=w=>t=>{doc.setFont('helvetica','bold');doc.setFontSize(8);return doc.getTextWidth(t)<=w};
+  const fitW=(w,sz)=>t=>{doc.setFont('helvetica','bold');doc.setFontSize(sz||8);return doc.getTextWidth(t)<=w};
   const pic=(buf,asp,cx,cy,cw,ch,fmt)=>{let w=cw,h=cw/asp; if(h>ch){h=ch;w=ch*asp}
     doc.addImage(new Uint8Array(buf),fmt||'JPEG',cx+(cw-w)/2,cy+(ch-h)/2,w,h)};
   const head=()=>{doc.setLineWidth(.5);doc.setDrawColor(0);doc.rect(M,M,PW,TH);T(`${D.cust} ${D.dtxt}`,M+PW/2,M+TH/2,{b:1,sz:13})};
   head(); let y=M+TH;
-  D.styles.forEach((s,i)=>{
-    const P=s.P, hp=P===1?104:P===2?56:42, bh=RH+P*hp+RH+GAP;
+  D.styles.forEach(s=>{
+    const N=s.labels.length, bh=RH+PH+NH+N*RH+RH+GAP;
     if(y+bh>BOT&&y>M+TH){doc.addPage();head();y=M+TH}
-    const y1=y+RH, y2=y1+P*hp, y3=y2+RH;
-    doc.setFillColor(255,192,0); doc.rect(M,y3,PW,GAP,'F'); doc.rect(M,y,PW,y3-y);
-    for(let c=1;c<nc;c++) line(X[c],y,X[c],y3);
-    line(M,y1,M+PW,y1); line(M,y2,M+PW,y2);
-    for(let k=1;k<P;k++){line(X[2],y1+k*hp,X[3],y1+k*hp); line(X[4],y1+k*hp,X[nc],y1+k*hp)}
+    const y1=y+RH, y2=y1+PH, y3=y2+NH, y4=y3+N*RH, y5=y4+RH;   // header | photos | names | sizes | total
+    if(s.note){doc.setFillColor(255,255,0); doc.rect(X[2],y3,X[3]-X[2],y5-y3,'F')}
+    doc.setFillColor(255,192,0); doc.rect(M,y5,PW,GAP,'F'); doc.rect(M,y,PW,y5-y);
+    [1,2,3,4,TC].forEach(c=>line(X[c],y,X[c],y5));
+    if(s.note)line(X[2],y3,X[3],y3);
+    for(let c=P0+1;c<TC;c++) line(X[c],y1,X[c],y5);
+    line(M,y1,M+PW,y1);
+    line(X[P0],y2,X[TC],y2);
+    for(let k=0;k<=N;k++){const yy=y3+k*RH; line(X[3],yy,X[nc],yy)}
     const hy=y+RH/2;
-    T(s.no,mid(0),hy); T('STYLE',mid(1),hy); T('PRINTS',mid(2),hy); T('Description',X[3]+2,hy,{a:'left'}); T('Total',mid(TC),hy);
-    s.labels.forEach((lab,j)=>T(lab,mid(4+j),hy,{b:1}));
-    if(s.so) pic(s.so.buf,s.so.w/s.so.h,X[1]+3,y1+3,X[2]-X[1]-6,P*hp-6,s.so.ext==='png'?'PNG':'JPEG');
-    const dl=descLines(s,fitW(X[4]-X[3]-5)), maxL=Math.max(1,Math.floor((P*hp-6)/9.5));
-    dl.slice(0,maxL).forEach((l,k)=>T(l.t,X[3]+2,y1+7+k*9.5,{a:'left',b:1}));
-    const th=hp-6;
-    s.rows.forEach((pr,k)=>{const ry=y1+k*hp, cy=ry+hp/2;
-      if(pr.th) pic(pr.th,1,X[2]+3,ry+3,th,th);
-      const nl=wrapTxt(pr.name,fitW(X[3]-X[2]-th-12)).slice(0,Math.max(1,Math.floor(th/9.5)));
-      nl.forEach((t,n)=>T(t,X[2]+th+8,cy+(n-(nl.length-1)/2)*9.5,{a:'left',b:1}));
-      s.labels.forEach((lab,j)=>{if(pr.q[j])T(pr.q[j],mid(4+j),cy,{b:1})});
-      T(pr.tot,mid(TC),cy,{b:1})});
-    const ty=y2+RH/2;
-    T('TOTAL',X[4]-3,ty,{a:'right',b:1});
-    s.labels.forEach((lab,j)=>T(s.col[j],mid(4+j),ty,{c:[255,0,0],sz:7}));
-    T(s.tot,mid(TC),ty,{b:1});
+    T(s.no,mid(0),hy); T('STYLE',mid(1),hy); T('Description',X[2]+2,hy,{a:'left'}); T('SIZE',mid(3),hy); T('PRINTS',(X[P0]+X[TC])/2,hy); T('Total',mid(TC),hy);
+    if(s.so) pic(s.so.buf,s.so.w/s.so.h,X[1]+3,y1+3,X[2]-X[1]-6,y5-y1-6,s.so.ext==='png'?'PNG':'JPEG');
+    const dfit=fitW(X[3]-X[2]-5), dtop=s.note?y3:y5;
+    descLines({name:s.name,code:s.code,note:''},dfit).slice(0,Math.max(1,Math.floor((dtop-y1-4)/9.5))).forEach((l,k)=>T(l.t,X[2]+2,y1+7+k*9.5,{a:'left',b:1}));
+    if(s.note)wrapTxt(s.note,dfit).slice(0,Math.max(1,Math.floor((y5-y3-4)/9.5))).forEach((t,k)=>T(t,X[2]+2,y3+7+k*9.5,{a:'left',b:1}));
+    s.prints.forEach((pr,k)=>{const c=P0+k, cw=X[c+1]-X[c];
+      if(pr.th) pic(pr.th,1,X[c]+2,y1+2,cw-4,PH-4);
+      const nl=wrapTxt(pr.name,fitW(cw-3,6.5)).slice(0,2);
+      nl.forEach((t,n)=>T(t,mid(c),(y2+y3)/2+(n-(nl.length-1)/2)*7.2,{b:1,sz:6.5}));
+      s.labels.forEach((lab,j)=>{T(pr.q[j]||'-',mid(c),y3+(j+.5)*RH,{b:1})});
+      T(pr.tot,mid(c),y4+RH/2,{c:[255,0,0],sz:7})});
+    s.labels.forEach((lab,j)=>{const cy=y3+(j+.5)*RH; T(lab,mid(3),cy,{b:1}); T(s.row[j],mid(TC),cy,{b:1})});
+    T('TOTAL',mid(3),y4+RH/2,{b:1,sz:7}); T(s.tot,mid(TC),y4+RH/2,{b:1});
     y+=bh;
   });
   y+=6; if(y+16>BOT){doc.addPage();y=M}
-  T('GRAND TOTAL',X[3]+2,y+8,{a:'left',b:1,sz:9}); T(D.grand,(X[4]+X[3+m+1])/2,y+8,{b:1,sz:9});
+  T('GRAND TOTAL',X[3]-3,y+8,{a:'right',b:1,sz:9}); T(D.grand,(X[P0]+X[TC])/2,y+8,{b:1,sz:9});
+  pageNums(doc);
   return doc.output('blob');
 }
 
@@ -868,9 +987,9 @@ async function buildXlsx(D){
     for(let c=1;c<=TC;c++) ws.getCell(r+11,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFC000'}};
     [1,2,3].forEach(c=>ws.mergeCells(r+1,c,r+10,c));
     put(r,1,i); put(r,2,'STYLE'); put(r,3,'COLORS'); put(r,4,'Description',{h:'left'}); put(r,TC,'Total');
-    descLines(s,xfit).forEach((l,k)=>{const x=put(r+1+k,4,l.t,{h:l.k==='c'?'center':'left',b:1}); if(l.k==='t')x.font={bold:true,color:{argb:NOTEC}}});
+    descLines(s,xfit).forEach((l,k)=>{const x=put(r+1+k,4,l.t,{h:l.k==='c'?'center':'left',b:1}); if(l.k==='t'){x.font={bold:true,color:{argb:NOTEC}};x.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFF00'}}}});
     s.labels.forEach((lab,j)=>{const c=5+j, L=col(c);
-      put(r+1,c,lab,{b:1}); if(s.q[j]) put(r+2,c,s.q[j],{b:1});
+      put(r+1,c,lab,{b:1}); put(r+2,c,s.q[j]||'-',{b:1});
       const tc=put(r+5,c,{formula:`SUM(${L}${r+2}:${L}${r+4})`,result:s.q[j]}); tc.font={color:{argb:'FFFF0000'},size:9}});
     put(r+5,TC,{formula:`SUM(${col(5)}${r+5}:${col(TC-1)}${r+5})`,result:s.tot},{b:1});
     put(r+7,4,'your Ref.',{h:'left',v:'top'});
@@ -884,6 +1003,7 @@ async function buildXlsx(D){
   const g=ws.getCell(tr,5); g.value={formula:D.styles.map((s,idx)=>col(TC)+(FIRST+idx*B+5)).join('+'),result:D.grand};
   g.font={bold:true}; g.alignment={horizontal:'center'};
   ws.pageSetup.printArea=`A1:${col(TC)}${tr}`;
+  if(n>5)ws.headerFooter.oddFooter='&C&8Page &P of &N';
   return new Blob([await wb.xlsx.writeBuffer()],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
 
@@ -909,8 +1029,9 @@ function buildPdf(D){
     line(X[0],y0+rh,X[3],y0+rh);
     const ry=r=>y0+(r+.5)*rh;
     T(i+1,mid(0),ry(0)); T('STYLE',mid(1),ry(0)); T('COLORS',mid(2),ry(0)); T('Description',X[3]+2,ry(0),{a:'left'}); T('Total',mid(TC),ry(0));
-    descLines(s,pfit).forEach((l,k)=>{l.k==='c'?T(l.t,mid(3),ry(1+k),{b:1}):T(l.t,X[3]+2,ry(1+k),{a:'left',b:1})});
-    s.labels.forEach((lab,j)=>{const c=4+j; T(lab,mid(c),ry(1),{b:1}); if(s.q[j]) T(s.q[j],mid(c),ry(2),{b:1}); T(s.q[j],mid(c),ry(5),{c:[255,0,0],sz:7})});
+    descLines(s,pfit).forEach((l,k)=>{if(l.k==='t'){doc.setFillColor(255,255,0);doc.rect(X[3]+.4,y0+(1+k)*rh+.4,X[4]-X[3]-.8,rh-.8,'F')}
+      l.k==='c'?T(l.t,mid(3),ry(1+k),{b:1}):T(l.t,X[3]+2,ry(1+k),{a:'left',b:1})});
+    s.labels.forEach((lab,j)=>{const c=4+j; T(lab,mid(c),ry(1),{b:1}); T(s.q[j]||'-',mid(c),ry(2),{b:1}); T(s.q[j],mid(c),ry(5),{c:[255,0,0],sz:7})});
     T(s.tot,mid(TC),ry(5),{b:1}); T('your Ref.',X[3]+2,ry(7),{a:'left'});
     if(s.so) pic(s.so.buf,s.so.w/s.so.h,X[1]+4,y0+rh+4,X[2]-X[1]-8,10*rh-8,s.so.ext==='png'?'PNG':'JPEG');
     if(s.cb) pic(s.cb,CW/AH,X[2]+1,y0+rh+1,X[3]-X[2]-2,10*rh-2);
@@ -918,7 +1039,15 @@ function buildPdf(D){
   const n=D.styles.length; let y=M+TH+(((n-1)%5)+1)*BH+6;
   if(y+16>842-M){doc.addPage();y=M}
   T('GRAND TOTAL',X[3]+2,y+8,{a:'left',b:1,sz:9}); T(D.grand,(X[4]+X[3+m+1])/2,y+8,{b:1,sz:9});
+  pageNums(doc);
   return doc.output('blob');
+}
+
+// page numbers, only when the sheet runs to more than one page
+function pageNums(doc){
+  const n=doc.getNumberOfPages(); if(n<2)return;
+  for(let i=1;i<=n;i++){doc.setPage(i);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(0,0,0);
+    doc.text('Page '+i+' of '+n,595/2,842-11,{align:'center',baseline:'middle'})}
 }
 
 async function shareOrSave(blob,fname){
@@ -985,6 +1114,7 @@ const curStyle=useHover=>{const a=document.activeElement, c=a&&a.closest?a.close
 const FLD='input:not([type=file]),button';
 document.addEventListener('keydown',e=>{
   if(!ready||!e.key)return;
+  if(!$('crop').hidden){if(cropKey)cropKey(e);return}
   const t=e.target, mod=e.ctrlKey||e.metaKey;
   if(!$('dlg').hidden){
     if(mod)e.preventDefault();
