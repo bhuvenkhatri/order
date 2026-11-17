@@ -97,6 +97,26 @@ button#add{background:transparent;color:var(--ac);border:2px dashed var(--ac);ma
 #dlg p{color:var(--mut);margin:8px 0 0}
 #dlg .row{margin-top:16px}
 button.danger{background:#d33;color:#fff}
+/* ===== page preview ===== */
+button#pvbtn{display:block;width:100%;margin-top:8px}
+#pv{position:fixed;inset:0;z-index:65;background:var(--bg);display:flex;flex-direction:column}
+#pv[hidden]{display:none}
+.pvh{display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px;padding:10px 14px;background:var(--card);border-bottom:1px solid var(--bd)}
+.pvh>b{font-size:18px}
+#pvinfo{flex:1;font-size:13px;color:var(--mut);min-width:120px}
+.pvc{display:flex;align-items:center;gap:8px}
+.pvl{font-size:13px;color:var(--mut)}
+#pvn{min-width:64px;text-align:center;font-weight:700}
+#pv button.ib{width:38px;height:38px;min-height:38px;font-size:20px;line-height:1}
+#pv button.chip{width:auto;min-height:0}
+#pvhr{width:160px;accent-color:var(--ac)}
+#pvhv{min-width:40px;font-weight:700;font-size:14px}
+#pvb{flex:1;overflow:auto;padding:16px;display:flex;flex-wrap:wrap;gap:18px;justify-content:center;align-content:flex-start;background:var(--bd)}
+.pvp{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;color:var(--mut)}
+.pvp canvas{display:block;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+.pvwait{color:var(--mut);padding:30px}
+.pvf{padding:10px 14px;background:var(--card);border-top:1px solid var(--bd)}
+.pvf button{display:block;width:100%;max-width:420px;margin:0 auto}
 
 /* sizes v3 */
 .sizes{grid-auto-flow:row;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));grid-auto-columns:auto;gap:8px}
@@ -295,11 +315,12 @@ input[type=checkbox]:focus-visible{outline:2px solid var(--ac);outline-offset:2p
 <div id="empty" class="empty" hidden>No styles yet. Tap “Add style” below.</div>
 <button type="button" id="add">＋ Add style</button>
 </div>
-<div id="bar"><div id="sum"></div><div class="row"><button id="go" style="flex:1">Create Excel + PDF</button><button id="prt" style="flex:1">🖨 Print</button></div></div>
+<div id="bar"><div id="sum"></div><div class="row"><button id="go" style="flex:1">Create Excel + PDF</button><button id="prt" style="flex:1">🖨 Print</button></div><button type="button" class="sec" id="pvbtn">👁 Preview pages</button></div>
 <div id="msg"></div>
 </main>
 <div id="toast" hidden></div>
 <div id="crop" hidden><div class="box"><b style="font-size:18px">Adjust picture</b><p>Drag to move. Pinch, scroll or use the slider to zoom in and cut off the background.</p><div id="cfr"><img id="cim" alt="" draggable="false"></div><div class="czr"><button type="button" class="sec" id="czo" aria-label="Zoom out">−</button><input type="range" id="cz" min="1" max="6" step="0.01" value="1" aria-label="Zoom"><button type="button" class="sec" id="czi" aria-label="Zoom in">＋</button></div><div class="row"><button type="button" class="sec" id="cno" style="flex:1">Keep as is</button><button type="button" class="sec" id="cchg" style="flex:1">Change photo</button><button type="button" id="cok" style="flex:1">Save</button></div></div></div>
+<div id="pv" hidden><div class="pvh"><b>Preview</b><span id="pvinfo"></span><div class="pvc"><span class="pvl">Pages</span><button type="button" class="ib" id="pvm" aria-label="Fewer pages">−</button><span id="pvn"></span><button type="button" class="ib" id="pvp" aria-label="More pages">＋</button></div><div class="pvc"><span class="pvl">Height</span><input type="range" id="pvhr" min="30" max="100" step="1" value="100" aria-label="Row height"><span id="pvhv">100%</span><button type="button" class="chip" id="pva">Reset</button></div><button type="button" class="ib" id="pvx" aria-label="Close preview">✕</button></div><div id="pvb"></div><div class="pvf"><button type="button" id="pvgo">Create Excel + PDF</button></div></div>
 <div id="dlg" hidden><div class="box"><b style="font-size:19px">Start a new sheet?</b><p>All current data and photos will be deleted. This cannot be undone.</p><div class="row"><button type="button" class="sec" id="dno" style="flex:1">Cancel</button><button type="button" class="sec danger" id="dyes" style="flex:1">Yes, start new</button></div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js" onerror="var x=document.createElement('script');x.src='exceljs.min.js';document.head.appendChild(x)"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" onerror="var x=document.createElement('script');x.src='jspdf.umd.min.js';document.head.appendChild(x)"></script>
@@ -319,7 +340,7 @@ const DB={
   async set(k,v){const d=await this.open();return new Promise((res,rej)=>{const t=d.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=res;t.onerror=()=>rej(t.error)})}
 };
 const strip=m=>({blob:m.blob,w:m.w,h:m.h,ext:m.ext,sig:m.sig});
-const pack=()=>({v:1,mode:S.mode,cust:$('cust').value,country:$('country').value,date:$('date').value,
+const pack=()=>({v:1,mode:S.mode,hf:S.hf||1,cust:$('cust').value,country:$('country').value,date:$('date').value,
   styles:S.styles.map(s=>({id:s.id,name:s.name,code:s.code,note:s.note||'',sizes:s.sizes.map(z=>({n:z.n,q:z.q})),same:s.same,sp:s.sp.map(strip),cp:s.cp.map(strip),prints:(s.prints||[]).map(p=>({id:p.id,name:p.name,q:p.q,img:p.img?strip(p.img):null}))}))});
 let tm; function save(now){if(!ready)return;clearTimeout(tm);tm=setTimeout(doSave,now?0:150)}
 async function doSave(){
@@ -712,7 +733,7 @@ async function importFile(f){
     }
     $('cust').value=cust; $('country').value=country; $('date').value=date||today();
     S.mode=impMode; $('mode').value=impMode;
-    S.styles=out; $('msg').innerHTML=''; render(); save(true); scrollTo({top:0,behavior:'smooth'});
+    S.styles=out; S.hf=1; $('msg').innerHTML=''; render(); save(true); scrollTo({top:0,behavior:'smooth'});
     toast(out.length+' styles imported');
   }catch(err){toast('Import failed: '+(err.message||err))}
 };
@@ -729,7 +750,7 @@ const dlgClose=()=>{$('dlg').hidden=true; if(innerWidth>900)$('newsheet').focus(
 $('newsheet').onclick=()=>{$('dlg').hidden=false; if(innerWidth>900)$('dno').focus()};
 $('dno').onclick=dlgClose;
 $('dyes').onclick=()=>{$('dlg').hidden=true; $('cust').value='';$('country').value='';$('date').value=today();
-  S.styles=[newStyle()]; $('msg').innerHTML=''; render(); save(true); scrollTo({top:0,behavior:'smooth'}); toast('New sheet is ready')};
+  S.styles=[newStyle()]; S.hf=1; $('msg').innerHTML=''; render(); save(true); scrollTo({top:0,behavior:'smooth'}); toast('New sheet is ready')};
 
 // ---- load saved sheet on start ----
 (async()=>{
@@ -739,7 +760,7 @@ $('dyes').onclick=()=>{$('dlg').hidden=true; $('cust').value='';$('country').val
   if(!st){try{st=JSON.parse(localStorage.getItem('os_text'))}catch(_){}}
   if(st&&Array.isArray(st.styles)){
     $('cust').value=st.cust||''; $('country').value=st.country||''; $('date').value=st.date||'';
-    S.mode=st.mode==='print'?'print':'std'; $('mode').value=S.mode;
+    S.mode=st.mode==='print'?'print':'std'; $('mode').value=S.mode; S.hf=Math.min(1,Math.max(HMIN,+st.hf||1));
     for(const x of st.styles){
       const s={...newStyle(),...x};
       if(!Array.isArray(x.sizes)){const OLD=['XS','S','M','L','XL','XXL','3XL'],q=x.q||[];s.sizes=OLD.map((n,k)=>({n,q:q[k]||''})).filter((z,k)=>(k>=1&&k<=5)||(k==0&&x.xs)||(k==6&&x.x3)||z.q)}
@@ -835,6 +856,51 @@ function descLines(s,fit){
 }
 
 const PMAX=10, CONT=' (CONT.)', PT=60; // prints per block, thumbnail px
+
+// ---- page plan: which styles go on which page, and the row height (f) ----
+// Shared by the PDF, the Excel and the preview, so all three break pages the same way.
+// S.hf = row height (1 = normal, .5 = half). Only the HEIGHT shrinks; the width always stays full.
+const HMIN=.3;
+function blockH(D){ // block heights in PDF points at full height
+  if(D.mode==='print') return D.styles.map(s=>13+40+17+s.labels.length*13+13+5);
+  const BH=(842-2*22-24-26)/5; return D.styles.map(()=>BH);
+}
+function packPages(D,f){ // fill pages top to bottom at row height f
+  const hs=blockH(D), cap=(842-2*22)/f-24-26+.01, pages=[[]]; let used=0;
+  hs.forEach((h,i)=>{if(pages[pages.length-1].length&&used+h>cap){pages.push([]);used=0} pages[pages.length-1].push(i); used+=h}); return pages;
+}
+function fitPages(D,want){ // tallest row height that still fits everything in `want` pages
+  if(packPages(D,1).length<=want) return 1;
+  let lo=HMIN, hi=1; for(let k=0;k<25;k++){const mid=(lo+hi)/2; if(packPages(D,mid).length<=want)lo=mid; else hi=mid}
+  return Math.floor(lo*100)/100;
+}
+function getPlan(D){
+  const f=Math.min(1,Math.max(HMIN,+S.hf||1));
+  if(D._plan&&D._pk===f) return D._plan;
+  D._pk=f; return D._plan={pages:packPages(D,f),f};
+}
+const fontK=f=>Math.min(1,f*1.15);   // text shrinks a little when rows get very low, so it still fits
+// collage / style picture re-made at the lower height so pictures fill their box instead of shrinking sideways
+async function picsAt(s,f){
+  if(!s._at)s._at={}; if(s._at[f])return s._at[f];
+  const H=Math.round(AH*f), o={};
+  if(D_STYLEWISE(s)){o.cb=s.cpi&&s.cpi.length?await compose(s.cpi,CW,H,4):null; o.sb=s.soi?await compose([s.soi],SW,H,6,'inset'):null}
+  else o.sb=s.soi?await compose([s.soi],SW,Math.round((48+24+s.labels.length*15.95+15.95)*f*4/3)-3,6,'inset'):null;
+  return s._at[f]=o;
+}
+const D_STYLEWISE=s=>!s.prints;
+// copy of a picture for the hidden _pics sheet: max 1400px, JPEG, so the Excel file does not balloon
+async function keepPic(m){
+  const MX=1400, k=Math.min(1,MX/Math.max(m.w,m.h));
+  if(k===1&&m.ext==='jpeg'&&m.blob.size<600e3) return {buf:await m.blob.arrayBuffer(),ext:'jpeg'};
+  const c=document.createElement('canvas'); c.width=Math.round(m.w*k); c.height=Math.round(m.h*k);
+  const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); x.drawImage(m.el,0,0,c.width,c.height);
+  const b=await new Promise(r=>c.toBlob(r,'image/jpeg',.85)); return {buf:await b.arrayBuffer(),ext:'jpeg'};
+}
+function shrinkFonts(ws,f){ // smaller text in lowered rows (title row 2 keeps its size)
+  const k=fontK(f); if(k>=1)return;
+  ws.eachRow((row,rn)=>{if(rn<FIRST)return; row.eachCell(c=>{const fo=c.font||{}; c.font={...fo,size:Math.max(6,Math.round((fo.size||11)*k*2)/2)}})});
+}
 // print-wise sheet: prints run ACROSS (small photo + name on top), sizes run DOWN
 const pwChars=mc=>[2.7,15.4,Math.max(10,Math.min(22,83.9-mc*9.5)),7,...Array(mc).fill(9.5),6]; // description shrinks to make room for prints
 async function collectP(){
@@ -855,7 +921,7 @@ async function collectP(){
       for(const p of src.slice(ci*per,(ci+1)*per)){const q=labels.map(n=>+p.q[n]||0);
         prints.push({name:p.name.trim().toUpperCase(),q,tot:q.reduce((a,b)=>a+b,0),th:p.img?await compose([p.img],PT,PT,1,false):null})}
       styles.push({no,labels,prints,name:s.name.trim().toUpperCase()+(ci?CONT:''),code:s.code.trim().replace(/[()]/g,'').toUpperCase(),note:(s.note||'').trim(),
-        so:so?{buf:sobuf,w:so.w,h:so.h,ext:so.ext}:null, sb,
+        so:so?{buf:sobuf,w:so.w,h:so.h,ext:so.ext}:null, sb, soi:so,
         row:labels.map((n,j)=>prints.reduce((a,p)=>a+p.q[j],0)), tot:prints.reduce((a,p)=>a+p.tot,0)});
     }
   }
@@ -865,18 +931,22 @@ async function collectP(){
 
 async function buildXlsxP(D){
   const mc=D.mc, TC=5+mc, wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('ORDER SHEET');
-  const col=n=>ws.getColumn(n).letter, W=pwChars(mc), scale=Math.max(40,Math.min(80,Math.floor(80*115/W.reduce((a,b)=>a+b))));
+  const col=n=>ws.getColumn(n).letter, W=pwChars(mc);
+  // pages follow the shared plan; rows are lowered by f (width untouched); scale only drops if a page would still not fit
+  const pl=getPlan(D), f=pl.f, lastOf=new Set(pl.pages.slice(0,-1).map(p=>p[p.length-1])), bhX=s=>(15.95+48+24+s.labels.length*15.95+15.95)*f+6.75;
+  const at=f<1?await Promise.all(D.styles.map(s=>picsAt(s,f))):null, PTf=Math.round(PT*f);
+  const phX=pl.pages.map((p,k)=>(k?0:50.25)+p.reduce((a,i)=>a+bhX(D.styles[i]),0)+(k===pl.pages.length-1?32:0));
+  const scale=Math.max(25,Math.min(Math.max(40,Math.min(80,Math.floor(80*115/W.reduce((a,b)=>a+b)))),Math.floor(100*(841.9-.6*72)/Math.max(...phX))));
   ws.columns=W.map(w=>({width:w}));
   ws.pageSetup={paperSize:9,orientation:'portrait',scale,horizontalCentered:true,margins:{left:.4,right:.4,top:.3,bottom:.3,header:.1,footer:.1}};
   ws.getRow(2).height=20.25; ws.mergeCells(2,1,2,TC);
   const t=ws.getCell('A2'); t.value=`${D.cust} ${D.dtxt}`; t.font={bold:true,size:14}; t.alignment={horizontal:'center',vertical:'middle'};
   for(let c=1;c<=TC;c++) ws.getCell(2,c).border=border;
   const put=(r,c,v,o={})=>{const x=ws.getCell(r,c);x.value=v;x.alignment={horizontal:o.h||'center',vertical:o.v||'middle'};if(o.b)x.font={bold:true};return x};
-  const RH=15.95, PH=48, NH=24, avail=(841.9-.6*72)/(scale/100), off=(1-PT/(9.5*7+5))/2; let r=FIRST, used=50, prevSep=0, pb=0; const totCells=[];
-  D.styles.forEach(s=>{
-    const N=s.labels.length, last=r+3+N, bh=RH+PH+NH+N*RH+RH+6.75;   // r header, r+1 photos, r+2 names, r+3.. sizes, last = TOTAL
-    if(prevSep&&used+bh>avail){ws.getRow(prevSep).addPageBreak();used=0;pb++}
-    used+=bh;
+  const RH=+(15.95*f).toFixed(2), PH=+(48*f).toFixed(2), NH=+(24*f).toFixed(2), off=(1-PTf/(9.5*7+5))/2; let r=FIRST; const totCells=[];
+  D.styles.forEach((s,idx)=>{
+    const N=s.labels.length, last=r+3+N;   // r header, r+1 photos, r+2 names, r+3.. sizes, last = TOTAL
+    if(lastOf.has(idx)) ws.getRow(last+1).addPageBreak();
     for(let k=r;k<=last;k++){ws.getRow(k).height=k===r+1?PH:k===r+2?NH:RH; for(let c=1;c<=TC;c++)ws.getCell(k,c).border=border}
     ws.getRow(last+1).height=6.75;
     for(let c=1;c<=TC;c++) ws.getCell(last+1,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFC000'}};
@@ -889,44 +959,46 @@ async function buildXlsxP(D){
     else ws.mergeCells(r+1,3,last,3);
     const dc=ws.getCell(r+1,3); dc.value=[s.name,s.code?`(${s.code})`:''].filter(Boolean).join('\n'); dc.font={bold:true}; dc.alignment={horizontal:'left',vertical:'top',wrapText:true};
     s.prints.forEach((pr,k)=>{const c=5+k, L=col(c);
-      if(pr.th){const id=wb.addImage({buffer:pr.th,extension:'jpeg'}); ws.addImage(id,{tl:{col:c-1+off,row:r+.04},ext:{width:PT,height:PT},editAs:'oneCell'})}
+      if(pr.th){const id=wb.addImage({buffer:pr.th,extension:'jpeg'}); ws.addImage(id,{tl:{col:c-1+off,row:r+.04},ext:{width:PTf,height:PTf},editAs:'oneCell'})}
       const nc=ws.getCell(r+2,c); nc.value=pr.name; nc.font={bold:true,size:8}; nc.alignment={horizontal:'center',vertical:'middle',wrapText:true};
       s.labels.forEach((lab,j)=>{put(r+3+j,c,pr.q[j]||'-',{b:1})});
       const x=put(last,c,{formula:`SUM(${L}${r+3}:${L}${last-1})`,result:pr.tot}); x.font={color:{argb:'FFFF0000'},size:9}});
     s.labels.forEach((lab,j)=>{const rr=r+3+j; put(rr,4,lab,{b:1}); put(rr,TC,{formula:`SUM(${col(5)}${rr}:${col(4+mc)}${rr})`,result:s.row[j]},{b:1})});
     put(last,4,'TOTAL',{b:1});
     put(last,TC,{formula:`SUM(${col(TC)}${r+3}:${col(TC)}${last-1})`,result:s.tot},{b:1}); totCells.push(col(TC)+last);
-    if(s.sb){const id=wb.addImage({buffer:s.sb,extension:'png'}); ws.addImage(id,{tl:{col:1,row:r},br:{col:2,row:last},editAs:'twoCell'})}
-    prevSep=last+1; r=last+2;
+    const sb=at?at[idx].sb:s.sb;
+    if(sb){const id=wb.addImage({buffer:sb,extension:'png'}); ws.addImage(id,{tl:{col:1,row:r},br:{col:2,row:last},editAs:'twoCell'})}
+    r=last+2;
   });
+  shrinkFonts(ws,f);
   const gr=r+1;
   ws.getCell(gr,3).value='GRAND TOTAL'; ws.getCell(gr,3).font={bold:true}; ws.getCell(gr,3).alignment={horizontal:'right'};
   ws.mergeCells(gr,5,gr,4+mc);
   const g=ws.getCell(gr,5); g.value={formula:totCells.join('+'),result:D.grand};
   g.font={bold:true}; g.alignment={horizontal:'center'};
   ws.pageSetup.printArea=`A1:${col(TC)}${gr}`;
-  if(pb)ws.headerFooter.oddFooter='&C&8Page &P of &N';
+  if(pl.pages.length>1)ws.headerFooter.oddFooter='&C&8Page &P of &N';
   return new Blob([await wb.xlsx.writeBuffer()],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
 
-function buildPdfP(D){
+async function buildPdfP(D){
   const {jsPDF}=window.jspdf, doc=new jsPDF({unit:'pt',format:'a4'}), mc=D.mc;
   const M=22, PW=595-2*M, chars=pwChars(mc), sum=chars.reduce((a,b)=>a+b);
   const X=[M]; chars.forEach(c=>X.push(X[X.length-1]+c/sum*PW));
   const TH=24, GAP=5, RH=13, PH=40, NH=17, nc=chars.length, TC=nc-1, BOT=842-M, P0=4;   // P0 = first print column
-  const T=(s,x,y,o={})=>{doc.setFont('helvetica',o.b?'bold':'normal');doc.setFontSize(o.sz||8);doc.setTextColor(...(o.c||[0,0,0]));doc.text(String(s),x,y,{align:o.a||'center',baseline:'middle'})};
-  const mid=c=>(X[c]+X[c+1])/2, line=(x1,y1,x2,y2)=>doc.line(x1,y1,x2,y2);
-  const fitW=(w,sz)=>t=>{doc.setFont('helvetica','bold');doc.setFontSize(sz||8);return doc.getTextWidth(t)<=w};
-  const pic=(buf,asp,cx,cy,cw,ch,fmt)=>{let w=cw,h=cw/asp; if(h>ch){h=ch;w=ch*asp}
-    doc.addImage(new Uint8Array(buf),fmt||'JPEG',cx+(cw-w)/2,cy+(ch-h)/2,w,h)};
-  const head=()=>{doc.setLineWidth(.5);doc.setDrawColor(0);doc.rect(M,M,PW,TH);T(`${D.cust} ${D.dtxt}`,M+PW/2,M+TH/2,{b:1,sz:13})};
-  head(); let y=M+TH;
-  D.styles.forEach(s=>{
+  const pl=getPlan(D), f=pl.f, fk=fontK(f), ty=y=>M+(y-M)*f;   // rows lowered by f, width stays full
+  const T=(s,x,y,o={})=>{doc.setFont('helvetica',o.b?'bold':'normal');doc.setFontSize((o.sz||8)*fk);doc.setTextColor(...(o.c||[0,0,0]));doc.text(String(s),x,ty(y),{align:o.a||'center',baseline:'middle'})};
+  const mid=c=>(X[c]+X[c+1])/2, line=(x1,y1,x2,y2)=>doc.line(x1,ty(y1),x2,ty(y2)), R=(x,y,w,h,st)=>doc.rect(x,ty(y),w,h*f,st);
+  const fitW=(w,sz)=>t=>{doc.setFont('helvetica','bold');doc.setFontSize((sz||8)*fk);return doc.getTextWidth(t)<=w};
+  const pic=(buf,asp,cx,cy,cw,ch,fmt)=>{ch*=f; let w=cw,h=cw/asp; if(h>ch){h=ch;w=ch*asp}
+    doc.addImage(new Uint8Array(buf),fmt||'JPEG',cx+(cw-w)/2,ty(cy)+(ch-h)/2,w,h)};
+  const head=()=>{doc.setLineWidth(.5);doc.setDrawColor(0);R(M,M,PW,TH);T(`${D.cust} ${D.dtxt}`,M+PW/2,M+TH/2,{b:1,sz:13})};
+  let y=M+TH;
+  pl.pages.forEach((pg,pi)=>{ if(pi)doc.addPage(); head(); y=M+TH; pg.forEach(i=>{ const s=D.styles[i];
     const N=s.labels.length, bh=RH+PH+NH+N*RH+RH+GAP;
-    if(y+bh>BOT&&y>M+TH){doc.addPage();head();y=M+TH}
     const y1=y+RH, y2=y1+PH, y3=y2+NH, y4=y3+N*RH, y5=y4+RH;   // header | photos | names | sizes | total
-    if(s.note){doc.setFillColor(255,255,0); doc.rect(X[2],y3,X[3]-X[2],y5-y3,'F')}
-    doc.setFillColor(255,192,0); doc.rect(M,y5,PW,GAP,'F'); doc.rect(M,y,PW,y5-y);
+    if(s.note){doc.setFillColor(255,255,0); R(X[2],y3,X[3]-X[2],y5-y3,'F')}
+    doc.setFillColor(255,192,0); R(M,y5,PW,GAP,'F'); R(M,y,PW,y5-y);
     [1,2,3,4,TC].forEach(c=>line(X[c],y,X[c],y5));
     if(s.note)line(X[2],y3,X[3],y3);
     for(let c=P0+1;c<TC;c++) line(X[c],y1,X[c],y5);
@@ -948,8 +1020,8 @@ function buildPdfP(D){
     s.labels.forEach((lab,j)=>{const cy=y3+(j+.5)*RH; T(lab,mid(3),cy,{b:1}); T(s.row[j],mid(TC),cy,{b:1})});
     T('TOTAL',mid(3),y4+RH/2,{b:1,sz:7}); T(s.tot,mid(TC),y4+RH/2,{b:1});
     y+=bh;
-  });
-  y+=6; if(y+16>BOT){doc.addPage();y=M}
+  })});
+  y+=6; if(ty(y+16)>BOT){doc.addPage();y=M}
   T('GRAND TOTAL',X[3]-3,y+8,{a:'right',b:1,sz:9}); T(D.grand,(X[P0]+X[TC])/2,y+8,{b:1,sz:9});
   pageNums(doc);
   return doc.output('blob');
@@ -969,10 +1041,10 @@ async function collect(){
     let cb=null, cpl=s.cp; if(idx>0&&s.same&&lastBuf){cb=lastBuf; cpl=lastCp} else if(s.cp.length){cb=await compose(s.cp,CW,AH,4); lastBuf=cb; lastCp=s.cp}
     const so=s.sp[0]||null;
     // originals of every colour picture, kept separately so a re-import gets each picture back (not the collage)
-    const cps=await Promise.all(cpl.map(async c=>({buf:await c.blob.arrayBuffer(),ext:c.ext})));
+    const cps=await Promise.all(cpl.map(keepPic));
     styles.push({q,labels,note:(s.note||'').trim(),name:s.name.trim().toUpperCase(),code:s.code.trim().replace(/[()]/g,'').toUpperCase(),
       so:so?{buf:await so.blob.arrayBuffer(),w:so.w,h:so.h,ext:so.ext}:null,
-      sb:so?await compose([so],SW,AH,6,'inset'):null, cb, cps});
+      sb:so?await compose([so],SW,AH,6,'inset'):null, cb, cps, cpi:cpl, soi:so, spk:so?await keepPic(so):null});
   }
   styles.forEach(s=>{s.tot=s.q.reduce((a,b)=>a+b,0)});
   const cw=Array.from({length:nsz},(_,j)=>Math.max(4.5,...styles.map(s=>s.labels[j]?s.labels[j].length*1.3+1.5:0)));
@@ -985,7 +1057,12 @@ async function buildXlsx(D){
   const m=D.m, TC=5+m, wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('ORDER SHEET');
   const col=n=>ws.getColumn(n).letter, n=D.styles.length;
   ws.columns=[2.7,15.4,52.6,19.3,...D.cw,5.4].map(w=>({width:w}));
-  ws.pageSetup={paperSize:9,orientation:'portrait',scale:m>5?Math.max(40,80-(m-5)*3):80,horizontalCentered:true,margins:{left:.4,right:.4,top:.3,bottom:.3,header:.1,footer:.1}};
+  // pages follow the shared plan; rows are lowered by f (width untouched); scale only drops if a page would still not fit
+  const pl=getPlan(D), f=pl.f, lastOf=new Set(pl.pages.slice(0,-1).map(p=>p[p.length-1])), RHs=+(15.95*f).toFixed(2), BHX=11*RHs+6.75;
+  const at=f<1?await Promise.all(D.styles.map(s=>picsAt(s,f))):null;
+  const phX=pl.pages.map((p,k)=>(k?0:50.25)+p.length*BHX+(k===pl.pages.length-1?32:0));
+  const scale=Math.max(25,Math.min(m>5?Math.max(40,80-(m-5)*3):80,Math.floor(100*(841.9-.6*72)/Math.max(...phX))));
+  ws.pageSetup={paperSize:9,orientation:'portrait',scale,horizontalCentered:true,margins:{left:.4,right:.4,top:.3,bottom:.3,header:.1,footer:.1}};
   ws.getRow(2).height=20.25; ws.mergeCells(2,1,2,TC);
   const t=ws.getCell('A2'); t.value=`${D.cust} ${D.dtxt}`; t.font={bold:true,size:14}; t.alignment={horizontal:'center',vertical:'middle'};
   for(let c=1;c<=TC;c++) ws.getCell(2,c).border=border;
@@ -994,7 +1071,7 @@ async function buildXlsx(D){
   const put=(r,c,v,o={})=>{const x=ws.getCell(r,c);x.value=v;x.alignment={horizontal:o.h||'center',vertical:o.v||'middle'};if(o.b)x.font={bold:true};return x};
   D.styles.forEach((s,idx)=>{
     const i=idx+1, r=FIRST+idx*B;
-    for(let k=0;k<11;k++){ws.getRow(r+k).height=15.95;for(let c=1;c<=TC;c++)ws.getCell(r+k,c).border=border}
+    for(let k=0;k<11;k++){ws.getRow(r+k).height=RHs;for(let c=1;c<=TC;c++)ws.getCell(r+k,c).border=border}
     ws.getRow(r+11).height=6.75;
     for(let c=1;c<=TC;c++) ws.getCell(r+11,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFC000'}};
     [1,2,3].forEach(c=>ws.mergeCells(r+1,c,r+10,c));
@@ -1005,59 +1082,64 @@ async function buildXlsx(D){
       const tc=put(r+5,c,{formula:`SUM(${L}${r+2}:${L}${r+4})`,result:s.q[j]}); tc.font={color:{argb:'FFFF0000'},size:9}});
     put(r+5,TC,{formula:`SUM(${col(5)}${r+5}:${col(TC-1)}${r+5})`,result:s.tot},{b:1});
     put(r+7,4,'your Ref.',{h:'left',v:'top'});
-    if(s.sb){const id=wb.addImage({buffer:s.sb,extension:'png'}); ws.addImage(id,{tl:{col:1,row:r},br:{col:2,row:r+10},editAs:'twoCell'})}
-    if(s.cb){const id=wb.addImage({buffer:s.cb,extension:'jpeg'}); ws.addImage(id,{tl:{col:2,row:r},ext:{width:CW,height:AH},editAs:'oneCell'})}
-    if(i%5===0&&i<n) ws.getRow(r+11).addPageBreak();
+    const sb=at?at[idx].sb:s.sb, cb=at?at[idx].cb:s.cb;
+    if(sb){const id=wb.addImage({buffer:sb,extension:'png'}); ws.addImage(id,{tl:{col:1,row:r},br:{col:2,row:r+10},editAs:'twoCell'})}
+    if(cb){const id=wb.addImage({buffer:cb,extension:'jpeg'}); ws.addImage(id,{tl:{col:2,row:r},ext:{width:CW,height:Math.round(AH*f)},editAs:'oneCell'})}
+    if(lastOf.has(idx)) ws.getRow(r+11).addPageBreak();
   });
+  shrinkFonts(ws,f);
   const tr=FIRST+n*B+1;
   ws.getCell(tr,4).value='GRAND TOTAL'; ws.getCell(tr,4).font={bold:true};
   ws.mergeCells(tr,5,tr,4+m);
   const g=ws.getCell(tr,5); g.value={formula:D.styles.map((s,idx)=>col(TC)+(FIRST+idx*B+5)).join('+'),result:D.grand};
   g.font={bold:true}; g.alignment={horizontal:'center'};
   ws.pageSetup.printArea=`A1:${col(TC)}${tr}`;
-  if(n>5)ws.headerFooter.oddFooter='&C&8Page &P of &N';
+  if(pl.pages.length>1)ws.headerFooter.oddFooter='&C&8Page &P of &N';
   // hidden sheet with the original pictures: row = style, column A = style picture, B.. = each colour picture
   const ph=wb.addWorksheet(PICS); ph.state='veryHidden';
   D.styles.forEach((s,idx)=>{
     ph.getCell(idx+1,1).value=idx+1;
     const add=(p,c)=>{const id=wb.addImage({buffer:p.buf,extension:p.ext==='png'?'png':'jpeg'}); ph.addImage(id,{tl:{col:c,row:idx},ext:{width:40,height:40},editAs:'oneCell'})};
-    if(s.so) add(s.so,1);
+    if(s.spk) add(s.spk,1);
     (s.cps||[]).forEach((p,j)=>add(p,2+j));
   });
   return new Blob([await wb.xlsx.writeBuffer()],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
 
-function buildPdf(D){
+async function buildPdf(D){
   if(D.mode==='print')return buildPdfP(D);
   const {jsPDF}=window.jspdf, doc=new jsPDF({unit:'pt',format:'a4'}), m=D.m;
   const M=22, PW=595-2*M, chars=[2.7,15.4,52.6,19.3,...D.cw,5.4], sum=chars.reduce((a,b)=>a+b);
   const X=[M]; chars.forEach(c=>X.push(X[X.length-1]+c/sum*PW));
   const TH=24, GAP=5, BH=(842-2*M-TH-26)/5, rh=(BH-GAP)/11, nc=chars.length, TC=nc-1;
-  const T=(s,x,y,o={})=>{doc.setFont('helvetica',o.b?'bold':'normal');doc.setFontSize(o.sz||8);doc.setTextColor(...(o.c||[0,0,0]));doc.text(String(s),x,y,{align:o.a||'center',baseline:'middle'})};
-  const mid=c=>(X[c]+X[c+1])/2, line=(x1,y1,x2,y2)=>doc.line(x1,y1,x2,y2);
-  const pic=(buf,asp,cx,cy,cw,ch,fmt)=>{let w=cw,h=cw/asp; if(h>ch){h=ch;w=ch*asp}
-    doc.addImage(new Uint8Array(buf),fmt||'JPEG',cx+(cw-w)/2,cy+(ch-h)/2,w,h)};
-  const pfit=t=>{doc.setFont('helvetica','bold');doc.setFontSize(8);return doc.getTextWidth(t)<=X[4]-X[3]-5};
-  doc.setLineWidth(.5); doc.setDrawColor(0);
-  D.styles.forEach((s,i)=>{
-    if(i%5===0){ if(i) doc.addPage(); doc.rect(M,M,PW,TH); T(`${D.cust} ${D.dtxt}`,M+PW/2,M+TH/2,{b:1,sz:13}) }
-    const y0=M+TH+(i%5)*BH;
-    doc.setFillColor(255,192,0); doc.rect(M,y0+11*rh,PW,GAP,'F');
-    doc.rect(M,y0,PW,11*rh);
+  const pl=getPlan(D), f=pl.f, fk=fontK(f), ty=y=>M+(y-M)*f;   // rows lowered by f, width stays full
+  const T=(s,x,y,o={})=>{doc.setFont('helvetica',o.b?'bold':'normal');doc.setFontSize((o.sz||8)*fk);doc.setTextColor(...(o.c||[0,0,0]));doc.text(String(s),x,ty(y),{align:o.a||'center',baseline:'middle'})};
+  const mid=c=>(X[c]+X[c+1])/2, line=(x1,y1,x2,y2)=>doc.line(x1,ty(y1),x2,ty(y2)), R=(x,y,w,h,st)=>doc.rect(x,ty(y),w,h*f,st);
+  const pic=(buf,asp,cx,cy,cw,ch,fmt)=>{ch*=f; let w=cw,h=cw/asp; if(h>ch){h=ch;w=ch*asp}
+    doc.addImage(new Uint8Array(buf),fmt||'JPEG',cx+(cw-w)/2,ty(cy)+(ch-h)/2,w,h)};
+  const pfit=t=>{doc.setFont('helvetica','bold');doc.setFontSize(8*fk);return doc.getTextWidth(t)<=X[4]-X[3]-5};
+  const at=f<1?await Promise.all(D.styles.map(s=>picsAt(s,f))):null;   // collages re-made at the lower height
+  pl.pages.forEach((pg,pi)=>{
+    if(pi) doc.addPage(); doc.setLineWidth(.5); doc.setDrawColor(0);
+    R(M,M,PW,TH); T(`${D.cust} ${D.dtxt}`,M+PW/2,M+TH/2,{b:1,sz:13});
+    pg.forEach((i,k)=>{ const s=D.styles[i];
+    const y0=M+TH+k*BH;
+    doc.setFillColor(255,192,0); R(M,y0+11*rh,PW,GAP,'F');
+    R(M,y0,PW,11*rh);
     for(let c=1;c<nc;c++) line(X[c],y0,X[c],y0+11*rh);
     for(let r=1;r<11;r++) line(X[3],y0+r*rh,X[nc],y0+r*rh);
     line(X[0],y0+rh,X[3],y0+rh);
     const ry=r=>y0+(r+.5)*rh;
     T(i+1,mid(0),ry(0)); T('STYLE',mid(1),ry(0)); T('COLORS',mid(2),ry(0)); T('Description',X[3]+2,ry(0),{a:'left'}); T('Total',mid(TC),ry(0));
-    descLines(s,pfit).forEach((l,k)=>{if(l.k==='t'){doc.setFillColor(255,255,0);doc.rect(X[3]+.4,y0+(1+k)*rh+.4,X[4]-X[3]-.8,rh-.8,'F')}
+    descLines(s,pfit).forEach((l,k)=>{if(l.k==='t'){doc.setFillColor(255,255,0);R(X[3]+.4,y0+(1+k)*rh+.4,X[4]-X[3]-.8,rh-.8,'F')}
       l.k==='c'?T(l.t,mid(3),ry(1+k),{b:1}):T(l.t,X[3]+2,ry(1+k),{a:'left',b:1})});
     s.labels.forEach((lab,j)=>{const c=4+j; T(lab,mid(c),ry(1),{b:1}); T(s.q[j]||'-',mid(c),ry(2),{b:1}); T(s.q[j],mid(c),ry(5),{c:[255,0,0],sz:7})});
     T(s.tot,mid(TC),ry(5),{b:1}); T('your Ref.',X[3]+2,ry(7),{a:'left'});
     if(s.so) pic(s.so.buf,s.so.w/s.so.h,X[1]+4,y0+rh+4,X[2]-X[1]-8,10*rh-8,s.so.ext==='png'?'PNG':'JPEG');
-    if(s.cb) pic(s.cb,CW/AH,X[2]+1,y0+rh+1,X[3]-X[2]-2,10*rh-2);
-  });
-  const n=D.styles.length; let y=M+TH+(((n-1)%5)+1)*BH+6;
-  if(y+16>842-M){doc.addPage();y=M}
+    const cb=at?at[i].cb:s.cb; if(cb) pic(cb,CW/(at?Math.round(AH*f):AH),X[2]+1,y0+rh+1,X[3]-X[2]-2,10*rh-2);
+  })});
+  let y=M+TH+pl.pages[pl.pages.length-1].length*BH+6;
+  if(ty(y+16)>842-M){doc.addPage();y=M}
   T('GRAND TOTAL',X[3]+2,y+8,{a:'left',b:1,sz:9}); T(D.grand,(X[4]+X[3+m+1])/2,y+8,{b:1,sz:9});
   pageNums(doc);
   return doc.output('blob');
@@ -1100,7 +1182,7 @@ $('prt').onclick=async()=>{
   const btn=$('prt'); btn.disabled=true; $('msg').textContent='Preparing PDF...';
   try{
     const D=await collect(); if(!D){$('msg').textContent='';btn.disabled=false;return}
-    const pdf=buildPdf(D), name=`${D.cust} ${D.dtxt}.pdf`;
+    const pdf=await buildPdf(D), name=`${D.cust} ${D.dtxt}.pdf`;
     $('msg').textContent='Sending to print station... (if this device is not trusted, approve on Telegram)';
     let r=await stSend(url,pdf,name,'');
     if(r.status===403){const t=await r.text(); if(/pin/i.test(t)){const p=prompt('Print station PIN'); if(p!==null) r=await stSend(url,pdf,name,p)}}
@@ -1115,12 +1197,53 @@ $('go').onclick=async()=>{
   $('msg').textContent='Creating files...';
   try{
     const D=await collect(); if(!D){$('msg').textContent='';return}
-    const xl=await buildXlsx(D), pdf=buildPdf(D), base=`${D.cust} ${D.dtxt}`;
+    const xl=await buildXlsx(D), pdf=await buildPdf(D), base=`${D.cust} ${D.dtxt}`;
     $('msg').innerHTML='Ready! Tap below:';
     [['Save / share Excel',xl,'.xlsx'],['Save / share PDF',pdf,'.pdf']].forEach(([lab,bl,ext])=>{
       const b=document.createElement('button'); b.textContent=lab; b.style.marginTop='8px'; b.onclick=()=>shareOrSave(bl,base+ext); $('msg').append(b)});
   }catch(e){$('msg').textContent='Error: '+(e.message||e)}
 };
+
+// ---- page preview: shows the PDF pages. Height slider lowers the rows (width stays full);
+//      Pages -/+ picks the row height that fits that many pages. Excel + PDF follow the same setting. ----
+let PV=null, pvSeq=0, pdfjsP=null, pvT=0;
+const pdfjs=()=>pdfjsP||(pdfjsP=new Promise((res,rej)=>{const x=document.createElement('script');
+  x.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+  x.onload=()=>{pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';res(pdfjsLib)};
+  x.onerror=()=>{pdfjsP=null;rej(new Error('could not load the preview viewer'))}; document.head.appendChild(x)}));
+async function pvOpen(){
+  $('pv').hidden=false; $('pvb').innerHTML='<div class="pvwait">Preparing preview…</div>'; $('pvinfo').textContent='';
+  try{const D=await collect(); if(!D){pvClose();return} PV={D}; await pvDraw()}
+  catch(e){$('pvb').innerHTML='<div class="pvwait">Preview failed: '+(e.message||e)+'</div>'}
+}
+function pvClose(){$('pv').hidden=true; PV=null; pvSeq++; clearTimeout(pvT); $('pvb').innerHTML=''}
+function pvUi(){
+  const D=PV.D, pl=getPlan(D), np=pl.pages.length, hp=Math.round(pl.f*100);
+  $('pvn').textContent=np+(np>1?' pages':' page');
+  $('pvhr').value=hp; $('pvhv').textContent=hp+'%';
+  $('pvinfo').textContent=`${D.styles.length} ${D.mode==='print'?'blocks':'styles'} · row height ${hp}%`;
+  $('pvm').disabled=np<=1||packPages(D,HMIN).length>=np; $('pvp').disabled=pl.f>=1; $('pva').disabled=pl.f>=1;
+}
+async function pvDraw(){
+  if(!PV)return; const seq=++pvSeq, D=PV.D; pvUi();
+  const lib=await pdfjs(), pdf=await lib.getDocument({data:await (await buildPdf(D)).arrayBuffer()}).promise; if(seq!==pvSeq)return;
+  const W=Math.min(560,$('pvb').clientWidth-32), out=[];
+  for(let i=1;i<=pdf.numPages;i++){
+    const pg=await pdf.getPage(i), vp1=pg.getViewport({scale:1}), k=W/vp1.width, dpr=Math.min(2,devicePixelRatio||1), vp=pg.getViewport({scale:k*dpr});
+    const c=document.createElement('canvas'); c.width=vp.width; c.height=vp.height; c.style.width=W+'px'; c.style.height=(vp1.height*k)+'px';
+    await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise; if(seq!==pvSeq)return;
+    const box=document.createElement('div'); box.className='pvp'; box.append(c,'Page '+i+' of '+pdf.numPages); out.push(box)}
+  $('pvb').replaceChildren(...out);
+}
+const pvSet=(v,wait)=>{if(!PV)return; S.hf=Math.min(1,Math.max(HMIN,v)); save(); pvUi(); clearTimeout(pvT);
+  pvT=setTimeout(()=>pvDraw().catch(e=>toast('Preview failed: '+(e.message||e))),wait?250:0)};
+$('pvbtn').onclick=pvOpen; $('pvx').onclick=pvClose;
+$('pvm').onclick=()=>{if(PV)pvSet(fitPages(PV.D,getPlan(PV.D).pages.length-1))};
+$('pvp').onclick=()=>{if(PV)pvSet(fitPages(PV.D,getPlan(PV.D).pages.length+1))};
+$('pvhr').oninput=e=>pvSet(e.target.value/100,true);
+$('pva').onclick=()=>pvSet(1);
+$('pvgo').onclick=()=>{pvClose(); $('go').click()};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('pv').hidden){e.stopPropagation();pvClose()}},true);
 
 // ---- desktop keeps actions, messages and shortcuts in the sidebar; phone keeps its original order ----
 function place(){
