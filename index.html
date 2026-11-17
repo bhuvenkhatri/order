@@ -659,8 +659,13 @@ async function importFile(f){
         if(i>0){const c=cust.slice(i+3).trim(),hit=COUNTRIES.find(x=>x.toLowerCase()===c.toLowerCase()); if(hit){country=hit;cust=cust.slice(0,i).trim()}} break}}
     const imgs=ws.getImages().map(im=>{const med=wb.getImage(im.imageId);return med?{row:Math.floor(im.range.tl.nativeRow)+1,col:Math.floor(im.range.tl.nativeCol),med}:null}).filter(Boolean);
     const mk=async med=>{const ext=med.extension==='png'?'png':'jpeg';return readImg(new File([med.buffer],'i.'+ext,{type:'image/'+ext}))};
+    // original pictures saved by newer exports (hidden sheet): [styleIndex] -> {sp, cp:[...]}
+    const orig=[]; const ph=wb.getWorksheet(PICS);
+    if(ph) for(const im of ph.getImages()){const med=wb.getImage(im.imageId); if(!med)continue;
+      const r=Math.floor(im.range.tl.nativeRow), c=Math.floor(im.range.tl.nativeCol), o=orig[r]||(orig[r]={sp:null,cp:[]});
+      if(c===1)o.sp=med; else if(c>=2)o.cp[c-2]=med}
     const out=[]; let impMode='std';
-    for(const r of blocks){
+    for(const [bi,r] of blocks.entries()){
       const s=newStyle(); s.sizes=[];
       if(tx(r,4).toUpperCase()==='SIZE'||tx(r,3).toUpperCase()==='SIZE'){
         const SC=tx(r,4).toUpperCase()==='SIZE'?4:3, DC=7-SC;
@@ -696,7 +701,11 @@ async function importFile(f){
       for(let k=1;k<=6;k++){const t=tx(r+k,4); if(!t)continue; if(/^your ref/i.test(t))break; const f=ws.getCell(r+k,4).font;
         if(f&&f.color&&f.color.argb===NOTEC)ntL.push(t); else if(/^\(.*\)$/.test(t))s.code=t.replace(/[()]/g,'').trim(); else nmL.push(t)}
       s.name=nmL.join(' '); s.note=ntL.join(' ');
-      for(const im of imgs){ if(im.row>=r&&im.row<r+11){
+      const o=orig[bi];
+      if(o){ // newer file: each picture saved on its own
+        if(o.sp){const m=await mk(o.sp); if(m)s.sp=[m]}
+        for(const med of o.cp){ if(!med)continue; const m=await mk(med); if(m)s.cp.push(m)}
+      } else for(const im of imgs){ if(im.row>=r&&im.row<r+11){ // older file: only the collage is there
         const m=await mk(im.med); if(!m) continue;
         if(im.col<=1) s.sp=[m]; else s.cp.push(m);}}
       out.push(s);
@@ -806,6 +815,7 @@ const B=12, FIRST=4, THIN={style:'thin'}, border={top:THIN,left:THIN,bottom:THIN
 const AH=Math.round(10*15.95*4/3)-3, SW=112, CW=366;
 
 // ---- description column: style name (wrapped), code, note (bold, wrapped) ----
+const PICS='_pics'; // hidden sheet holding the original pictures of a style-wise export
 const NOTEC='FF010101'; // near-black marker so Import can tell a note line from a wrapped name line
 function wrapTxt(text,fit){
   const out=[]; let cur='';
@@ -953,14 +963,16 @@ async function collect(){
   const nsz=Math.max(0,...S.styles.map(s=>s.sizes.length));
   if(!nsz){toast('Keep at least one size');return null}
   if(!$('date').value) $('date').value=today();
-  const [y,m,d]=$('date').value.split('-'), styles=[]; let lastBuf=null;
+  const [y,m,d]=$('date').value.split('-'), styles=[]; let lastBuf=null, lastCp=[];
   for(const [idx,s] of S.styles.entries()){
     const zs=[...s.sizes].sort((a,b)=>rank(a.n)-rank(b.n)), labels=zs.map(z=>z.n), q=zs.map(z=>+z.q||0);
-    let cb=null; if(idx>0&&s.same&&lastBuf) cb=lastBuf; else if(s.cp.length){cb=await compose(s.cp,CW,AH,4); lastBuf=cb}
+    let cb=null, cpl=s.cp; if(idx>0&&s.same&&lastBuf){cb=lastBuf; cpl=lastCp} else if(s.cp.length){cb=await compose(s.cp,CW,AH,4); lastBuf=cb; lastCp=s.cp}
     const so=s.sp[0]||null;
+    // originals of every colour picture, kept separately so a re-import gets each picture back (not the collage)
+    const cps=await Promise.all(cpl.map(async c=>({buf:await c.blob.arrayBuffer(),ext:c.ext})));
     styles.push({q,labels,note:(s.note||'').trim(),name:s.name.trim().toUpperCase(),code:s.code.trim().replace(/[()]/g,'').toUpperCase(),
       so:so?{buf:await so.blob.arrayBuffer(),w:so.w,h:so.h,ext:so.ext}:null,
-      sb:so?await compose([so],SW,AH,6,'inset'):null, cb});
+      sb:so?await compose([so],SW,AH,6,'inset'):null, cb, cps});
   }
   styles.forEach(s=>{s.tot=s.q.reduce((a,b)=>a+b,0)});
   const cw=Array.from({length:nsz},(_,j)=>Math.max(4.5,...styles.map(s=>s.labels[j]?s.labels[j].length*1.3+1.5:0)));
@@ -1004,6 +1016,14 @@ async function buildXlsx(D){
   g.font={bold:true}; g.alignment={horizontal:'center'};
   ws.pageSetup.printArea=`A1:${col(TC)}${tr}`;
   if(n>5)ws.headerFooter.oddFooter='&C&8Page &P of &N';
+  // hidden sheet with the original pictures: row = style, column A = style picture, B.. = each colour picture
+  const ph=wb.addWorksheet(PICS); ph.state='veryHidden';
+  D.styles.forEach((s,idx)=>{
+    ph.getCell(idx+1,1).value=idx+1;
+    const add=(p,c)=>{const id=wb.addImage({buffer:p.buf,extension:p.ext==='png'?'png':'jpeg'}); ph.addImage(id,{tl:{col:c,row:idx},ext:{width:40,height:40},editAs:'oneCell'})};
+    if(s.so) add(s.so,1);
+    (s.cps||[]).forEach((p,j)=>add(p,2+j));
+  });
   return new Blob([await wb.xlsx.writeBuffer()],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
 
