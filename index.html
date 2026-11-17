@@ -97,6 +97,13 @@ button#add{background:transparent;color:var(--ac);border:2px dashed var(--ac);ma
 #dlg p{color:var(--mut);margin:8px 0 0}
 #dlg .row{margin-top:16px}
 button.danger{background:#d33;color:#fff}
+button.mt{display:inline-flex;align-items:center;gap:5px;width:auto;flex:none;min-height:0;height:30px;padding:0 4px;border:0;border-radius:8px;background:none;color:var(--mut);font-size:12px;font-weight:600;white-space:nowrap}
+button.mt i{position:relative;width:30px;height:17px;border-radius:9px;background:var(--bd);transition:background .15s}
+button.mt i::after{content:'';position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3);transition:left .15s}
+button.mt[aria-checked=true]{color:var(--ac)}
+button.mt[aria-checked=true] i{background:var(--ac)}
+button.mt[aria-checked=true] i::after{left:15px}
+.sc.alt{border-left-style:dashed}
 /* ===== page preview ===== */
 button#pvbtn{display:block;width:100%;margin-top:8px}
 #pv{position:fixed;inset:0;z-index:65;background:var(--bg);display:flex;flex-direction:column}
@@ -341,7 +348,7 @@ const DB={
 };
 const strip=m=>({blob:m.blob,w:m.w,h:m.h,ext:m.ext,sig:m.sig});
 const pack=()=>({v:1,mode:S.mode,hf:S.hf||1,cust:$('cust').value,country:$('country').value,date:$('date').value,
-  styles:S.styles.map(s=>({id:s.id,name:s.name,code:s.code,note:s.note||'',sizes:s.sizes.map(z=>({n:z.n,q:z.q})),same:s.same,sp:s.sp.map(strip),cp:s.cp.map(strip),prints:(s.prints||[]).map(p=>({id:p.id,name:p.name,q:p.q,img:p.img?strip(p.img):null}))}))});
+  styles:S.styles.map(s=>({id:s.id,alt:!!s.alt,name:s.name,code:s.code,note:s.note||'',sizes:s.sizes.map(z=>({n:z.n,q:z.q})),same:s.same,sp:s.sp.map(strip),cp:s.cp.map(strip),prints:(s.prints||[]).map(p=>({id:p.id,name:p.name,q:p.q,img:p.img?strip(p.img):null}))}))});
 let tm; function save(now){if(!ready)return;clearTimeout(tm);tm=setTimeout(doSave,now?0:150)}
 async function doSave(){
   const p=pack();
@@ -472,7 +479,7 @@ function title(){
 }
 function sums(){
   let n=0; S.styles.forEach(s=>{
-    if(S.mode==='print'){s.prints.forEach(p=>{p.tot=s.sizes.reduce((a,z)=>a+(+p.q[z.n]||0),0)});s.tot=s.prints.reduce((a,p)=>a+p.tot,0)}
+    if(em(s)==='print'){s.prints.forEach(p=>{p.tot=s.sizes.reduce((a,z)=>a+(+p.q[z.n]||0),0)});s.tot=s.prints.reduce((a,p)=>a+p.tot,0)}
     else s.tot=s.sizes.reduce((a,z)=>a+(+z.q||0),0);
     n+=s.tot});
   document.querySelectorAll('.sc').forEach(c=>{const s=S.styles.find(x=>x.id===c.dataset.id);c.querySelector('.stot').textContent='Total: '+(s?s.tot:0);c.querySelector('.st2').textContent=s?s.tot:0;
@@ -490,7 +497,7 @@ function render(){
 function card(s,i){
   const d=document.createElement('div'); d.className='card sc'; d.dataset.id=s.id;
   d.innerHTML=`<div class="sh"><span class="grip" title="Hold and drag to move up or down">⠿</span><b><span class="mo">Style ${i+1}</span><span class="dk"><span class="bdg">${String(i+1).padStart(2,'0')}</span><span class="snm"></span></span></b><span class="dk tt">Total <b class="st2">0</b></span>
-  <button type="button" class="ib up" aria-label="Move up">▲</button><button type="button" class="ib dn" aria-label="Move down">▼</button><button type="button" class="ib rm" aria-label="Remove style">✕</button></div>
+  <button type="button" class="mt" role="switch"><span>Print</span><i></i></button><button type="button" class="ib up" aria-label="Move up">▲</button><button type="button" class="ib dn" aria-label="Move down">▼</button><button type="button" class="ib rm" aria-label="Remove style">✕</button></div>
   <div class="cg"><div class="g1">
   <label>Style name (e.g. SKIRT + TOP SET)</label><input type="text" class="nm" autocapitalize="characters">
   <label>Style code (e.g. DHI0021)</label><input type="text" class="cd" autocapitalize="characters">
@@ -534,7 +541,7 @@ function card(s,i){
   const addSize=(n,chip)=>{n=(n||'').trim().toUpperCase().replace(/\s+/g,' ');if(!n)return;
     if(s.sizes.some(z=>z.n===n)){toast(n+' is already added');return}
     s.sizes.push({n,q:''});s.sizes.sort((a,b)=>rank(a.n)-rank(b.n));szn.value='';drawSizes();sums();save();
-    if(chip&&innerWidth>900&&S.mode!=='print'){const q=grid.querySelectorAll('input')[s.sizes.findIndex(z=>z.n===n)]; if(q)q.focus()}};
+    if(chip&&innerWidth>900&&em(s)!=='print'){const q=grid.querySelectorAll('input')[s.sizes.findIndex(z=>z.n===n)]; if(q)q.focus()}};
   Q('.bas').onclick=()=>{form.hidden=!form.hidden;if(!form.hidden)szn.focus()};
   Q('.szok').onclick=()=>addSize(szn.value);
   szn.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();addSize(szn.value)}};
@@ -543,9 +550,15 @@ function card(s,i){
   thumbs(Q('.tsp'),s.sp); thumbs(Q('.tcp'),s.cp);
   Q('.fsp').onchange=e=>pick(e,s,'sp',Q('.tsp'),true); Q('.fcp').onchange=e=>pick(e,s,'cp',Q('.tcp'));
   const sm=Q('.sm'); if(sm){sm.checked=s.same;sm.onchange=()=>{s.same=sm.checked;save()}}
+  // this style only: switch between style-wise and print-wise (the sheet type at the top stays as it is)
+  const mt=Q('.mt'), isP=em(s)==='print'; mt.setAttribute('aria-checked',isP);
+  mt.title=(isP?'Print-wise':'Style-wise')+' - click to show only this style '+(isP?'style-wise':'print-wise'); if(s.alt)d.classList.add('alt');
+  mt.onclick=()=>{s.alt=!s.alt; if(em(s)==='print'&&!s.prints.length&&s.cp.length)s.prints=s.cp.map(m=>newPrint(m));
+    const nd=card(s,S.styles.indexOf(s)); d.replaceWith(nd); sums(); save(); if(innerWidth>900)nd.querySelector('.mt').focus();
+    toast('Style '+(S.styles.indexOf(s)+1)+' is now '+(em(s)==='print'?'print-wise':'style-wise'))};
   Q('.up').disabled=i==0; Q('.dn').disabled=i==S.styles.length-1;
   Q('.up').onclick=()=>move(s,-1); Q('.dn').onclick=()=>move(s,1); Q('.rm').onclick=()=>remove(s);
-  if(S.mode==='print'){
+  if(em(s)==='print'){
     d.classList.add('pm');
     const pw=document.createElement('div'); pw.className='pw';
     pw.innerHTML='<label>Sizes for this style (✕ removes a size)</label><div class="pszs"></div><div class="pwa"></div><label>Prints: photo, name and quantities for each</label><div class="prs"></div><div class="pradd"><button type="button" class="sec bap">＋ Add print</button><button type="button" class="sec baf">＋ Add photos</button><input type="file" accept="image/*" multiple hidden class="fpr"></div>';
@@ -614,7 +627,7 @@ function card(s,i){
   d.addEventListener('dragover',e=>{if(!hasFiles(e))return;e.preventDefault();e.stopPropagation();d.classList.add('over')});
   d.addEventListener('dragleave',e=>{if(!d.contains(e.relatedTarget))d.classList.remove('over')});
   d.addEventListener('drop',e=>{if(!hasFiles(e))return;e.preventDefault();e.stopPropagation();d.classList.remove('over');
-    const fs=[...e.dataTransfer.files]; if(fs.length===1&&/\.xlsx$/i.test(fs[0].name))dropXlsx(fs[0]); else if(S.mode==='print')addPrints(s,fs); else addFiles(fs,s,'cp',false)});
+    const fs=[...e.dataTransfer.files]; if(fs.length===1&&/\.xlsx$/i.test(fs[0].name))dropXlsx(fs[0]); else if(em(s)==='print')addPrints(s,fs); else addFiles(fs,s,'cp',false)});
   d.addEventListener('pointerenter',()=>{hov=s}); d.addEventListener('pointerleave',()=>{if(hov===s)hov=null});
   drag(d,Q('.grip'));
   return d;
@@ -672,7 +685,10 @@ async function importFile(f){
   try{
     const wb=new ExcelJS.Workbook(); await wb.xlsx.load(await f.arrayBuffer());
     const ws=wb.worksheets[0], tx=(r,c)=>{const v=ws.getCell(r,c).value; if(v==null)return ''; return String(ws.getCell(r,c).text??v).trim()};
-    const blocks=[]; for(let r=1;r<=ws.rowCount;r++) if(tx(r,2).toUpperCase()==='STYLE') blocks.push(r);
+    // mixed sheets store, per block, its first row and the real column of every layout column
+    const cmaps=[], cs=wb.getWorksheet(COLS); let blocks=[];
+    if(cs) cs.eachRow(row=>{const v=row.values.slice(1).map(Number); blocks.push(v[0]); cmaps.push(v)});
+    else for(let r=1;r<=ws.rowCount;r++) if(tx(r,2).toUpperCase()==='STYLE') blocks.push(r);
     if(!blocks.length){toast('No styles found in this Excel');return}
     let cust='',country='',date='';
     for(let r=1;r<blocks[0];r++){const t=tx(r,1); const m=/^(.*?)\s+(\d{2})-(\d{2})-(\d{4})$/.exec(t);
@@ -687,39 +703,42 @@ async function importFile(f){
       if(c===1)o.sp=med; else if(c>=2)o.cp[c-2]=med}
     const out=[]; let impMode='std';
     for(const [bi,r] of blocks.entries()){
+      const cm=cmaps[bi], C=c=>cm?(cm[c]||9999):c, cell=(rr,c)=>ws.getCell(rr,C(c));
+      const tx=(rr,c)=>{const x=cell(rr,c),v=x.value; if(v==null)return ''; return String(x.text??v).trim()};
+      const lc=c0=>{if(!cm)return c0; let k=0; for(let c=1;c<cm.length;c++) if(cm[c]&&c0>=cm[c]-1)k=c-1; return k};   // real 0-based column -> layout 0-based column
       const s=newStyle(); s.sizes=[];
       if(tx(r,4).toUpperCase()==='SIZE'||tx(r,3).toUpperCase()==='SIZE'){
         const SC=tx(r,4).toUpperCase()==='SIZE'?4:3, DC=7-SC;
-        impMode='print';
+        s._k='print';
         let tc=5; while(tc<80&&tx(r,tc).toLowerCase()!=='total') tc++;
         for(let c=5;c<tc;c++){const pr=newPrint(); pr.name=tx(r+2,c); s.prints.push(pr)}
         let N=0; for(let k=3;k<60;k++){const n=tx(r+k,SC).toUpperCase(); if(!n||n==='TOTAL')break; s.sizes.push({n,q:''}); N++;
-          s.prints.forEach((pr,i)=>{const q=ws.getCell(r+k,5+i).value; if(typeof q==='number'&&q)pr.q[n]=String(q)})}
-        const L=String(ws.getCell(r+1,DC).text??'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean), ci=L.findIndex(x=>/^\(.*\)$/.test(x));
+          s.prints.forEach((pr,i)=>{const q=cell(r+k,5+i).value; if(typeof q==='number'&&q)pr.q[n]=String(q)})}
+        const L=String(cell(r+1,DC).text??'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean), ci=L.findIndex(x=>/^\(.*\)$/.test(x));
         if(ci>=0){s.name=L.slice(0,ci).join(' ');s.code=L[ci].replace(/[()]/g,'').trim();s.note=L.slice(ci+1).join(' ')} else {s.name=L[0]||'';s.note=L.slice(1).join(' ')}
-        {const top=String(ws.getCell(r+1,DC).text??'').trim(), nt=String(ws.getCell(r+3,DC).text??'').trim(); if(nt&&nt!==top)s.note=nt.replace(/\s*\n\s*/g,' ')}
+        {const top=String(cell(r+1,DC).text??'').trim(), nt=String(cell(r+3,DC).text??'').trim(); if(nt&&nt!==top)s.note=nt.replace(/\s*\n\s*/g,' ')}
         for(const im of imgs){ if(im.row>r&&im.row<=r+N+4){ const m=await mk(im.med); if(!m)continue;
-          if(im.col<=1)s.sp=[m]; else if(im.row===r+1&&s.prints[im.col-4])s.prints[im.col-4].img=m }}
+          if(lc(im.col)<=1)s.sp=[m]; else if(im.row===r+1&&s.prints[lc(im.col)-4])s.prints[lc(im.col)-4].img=m }}
         s.prints=s.prints.filter(q=>q.img||q.name||Object.keys(q.q).length);
         if(s.name.endsWith(CONT)&&out.length){out[out.length-1].prints.push(...s.prints)} else out.push(s);
         continue;
       }
       if(tx(r,3).toUpperCase()==='PRINTS'){
-        impMode='print';
+        s._k='print';
         for(let c=5;c<60;c++){const n=tx(r,c).toUpperCase(); if(!n||n==='TOTAL')break; s.sizes.push({n,q:''})}
-        const L=String(ws.getCell(r+1,4).text??'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean), ci=L.findIndex(x=>/^\(.*\)$/.test(x));
+        const L=String(cell(r+1,4).text??'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean), ci=L.findIndex(x=>/^\(.*\)$/.test(x));
         if(ci>=0){s.name=L.slice(0,ci).join(' ');s.code=L[ci].replace(/[()]/g,'').trim();s.note=L.slice(ci+1).join(' ')} else {s.name=L[0]||'';s.note=L.slice(1).join(' ')}
         let P=0; for(let k=1;k<400;k++){ if(k>1&&tx(r+k,4).toUpperCase()==='TOTAL')break; if(k>1&&tx(r+k,2).toUpperCase()==='STYLE')break;
-          const pr=newPrint(); pr.name=tx(r+k,3); s.sizes.forEach((z,j)=>{const q=ws.getCell(r+k,5+j).value; if(typeof q==='number'&&q)pr.q[z.n]=String(q)}); s.prints.push(pr); P=k}
-        for(const im of imgs){ if(im.row>r&&im.row<=r+P){ const m=await mk(im.med); if(!m)continue; if(im.col<=1)s.sp=[m]; else s.prints[im.row-r-1].img=m }}
+          const pr=newPrint(); pr.name=tx(r+k,3); s.sizes.forEach((z,j)=>{const q=cell(r+k,5+j).value; if(typeof q==='number'&&q)pr.q[z.n]=String(q)}); s.prints.push(pr); P=k}
+        for(const im of imgs){ if(im.row>r&&im.row<=r+P){ const m=await mk(im.med); if(!m)continue; if(lc(im.col)<=1)s.sp=[m]; else s.prints[im.row-r-1].img=m }}
         s.prints=s.prints.filter(q=>q.img||q.name||Object.keys(q.q).length);
         if(s.name.endsWith(CONT)&&out.length){out[out.length-1].prints.push(...s.prints)} else out.push(s);
         continue;
       }
       let tc=5; while(tc<60&&tx(r,tc).toLowerCase()!=='total'&&tx(r+1,tc)!=='') tc++;
-      for(let c=5;c<tc;c++){const n=tx(r+1,c).toUpperCase(); if(!n)continue; const q=ws.getCell(r+2,c).value; s.sizes.push({n,q:(typeof q==='number'&&q)?String(q):''})}
+      for(let c=5;c<tc;c++){const n=tx(r+1,c).toUpperCase(); if(!n)continue; const q=cell(r+2,c).value; s.sizes.push({n,q:(typeof q==='number'&&q)?String(q):''})}
       const nmL=[],ntL=[];
-      for(let k=1;k<=6;k++){const t=tx(r+k,4); if(!t)continue; if(/^your ref/i.test(t))break; const f=ws.getCell(r+k,4).font;
+      for(let k=1;k<=6;k++){const t=tx(r+k,4); if(!t)continue; if(/^your ref/i.test(t))break; const f=cell(r+k,4).font;
         if(f&&f.color&&f.color.argb===NOTEC)ntL.push(t); else if(/^\(.*\)$/.test(t))s.code=t.replace(/[()]/g,'').trim(); else nmL.push(t)}
       s.name=nmL.join(' '); s.note=ntL.join(' ');
       const o=orig[bi];
@@ -728,10 +747,13 @@ async function importFile(f){
         for(const med of o.cp){ if(!med)continue; const m=await mk(med); if(m)s.cp.push(m)}
       } else for(const im of imgs){ if(im.row>=r&&im.row<r+11){ // older file: only the collage is there
         const m=await mk(im.med); if(!m) continue;
-        if(im.col<=1) s.sp=[m]; else s.cp.push(m);}}
+        if(lc(im.col)<=1) s.sp=[m]; else s.cp.push(m);}}
       out.push(s);
     }
     $('cust').value=cust; $('country').value=country; $('date').value=date||today();
+    // sheet type = what most styles use; the others keep their own layout with the per-style switch
+    const np=out.filter(x=>x._k==='print').length; impMode=np&&np*2>=out.length?'print':'std';
+    out.forEach(x=>{x.alt=(x._k==='print'?'print':'std')!==impMode; delete x._k});
     S.mode=impMode; $('mode').value=impMode;
     S.styles=out; S.hf=1; $('msg').innerHTML=''; render(); save(true); scrollTo({top:0,behavior:'smooth'});
     toast(out.length+' styles imported');
@@ -741,7 +763,7 @@ async function importFile(f){
 // ---- sheet type: style-wise or print-wise ----
 $('mode').onchange=()=>{
   S.mode=$('mode').value==='print'?'print':'std';
-  if(S.mode==='print')S.styles.forEach(s=>{if(!s.prints.length&&s.cp.length)s.prints=s.cp.map(m=>newPrint(m))});
+  S.styles.forEach(s=>{if(em(s)==='print'&&!s.prints.length&&s.cp.length)s.prints=s.cp.map(m=>newPrint(m))});
   render(); save();
 };
 
@@ -862,8 +884,8 @@ const PMAX=10, CONT=' (CONT.)', PT=60; // prints per block, thumbnail px
 // S.hf = row height (1 = normal, .5 = half). Only the HEIGHT shrinks; the width always stays full.
 const HMIN=.3;
 function blockH(D){ // block heights in PDF points at full height
-  if(D.mode==='print') return D.styles.map(s=>13+40+17+s.labels.length*13+13+5);
-  const BH=(842-2*22-24-26)/5; return D.styles.map(()=>BH);
+  const BH=(842-2*22-24-26)/5;
+  return D.styles.map(s=>kindOf(D,s)==='print'?13+40+17+s.labels.length*13+13+5:BH);
 }
 function packPages(D,f){ // fill pages top to bottom at row height f
   const hs=blockH(D), cap=(842-2*22)/f-24-26+.01, pages=[[]]; let used=0;
@@ -903,15 +925,35 @@ function shrinkFonts(ws,f){ // smaller text in lowered rows (title row 2 keeps i
 }
 // print-wise sheet: prints run ACROSS (small photo + name on top), sizes run DOWN
 const pwChars=mc=>[2.7,15.4,Math.max(10,Math.min(22,83.9-mc*9.5)),7,...Array(mc).fill(9.5),6]; // description shrinks to make room for prints
-async function collectP(){
+const stdChars=D=>[2.7,15.4,52.6,19.3,...D.cw,5.4];
+// each style can be flipped to the other layout with its own button (s.alt)
+const otherMode=m=>m==='print'?'std':'print', em=s=>s&&s.alt?otherMode(S.mode):S.mode;
+const kindOf=(D,x)=>D.mode==='mix'?x.kind:D.mode;
+const COLS='_cols'; // hidden sheet of a mixed export: per block its first row and the real column of each layout column
+
+function checkSheet(){
   const cust=$('cust').value.trim().toUpperCase();
   if(!cust){toast('Enter the customer name');$('cust').focus();return null}
   if(!S.styles.length){toast('Add at least one style first');return null}
   if(!Math.max(0,...S.styles.map(s=>s.sizes.length))){toast('Keep at least one size');return null}
   if(!$('date').value) $('date').value=today();
-  const [y,mo,d]=$('date').value.split('-'), styles=[]; let no=0;
-  for(const s of S.styles){
-    no++;
+  const [y,mo,d]=$('date').value.split('-'), country=$('country').value.trim().toUpperCase();
+  return {cust:country?cust+' - '+country:cust,dtxt:`${d}-${mo}-${y}`};
+}
+async function collect(){
+  const H=checkSheet(); if(!H)return null;
+  const S1=S.styles.filter(s=>em(s)==='std'), P1=S.styles.filter(s=>em(s)==='print');
+  const A=S1.length?await collectS(S1):null, B=P1.length?await collectP(P1):null;
+  if(!B) return {...H,...A,mode:'std'};
+  if(!A) return {...H,...B,mode:'print'};
+  A.styles.forEach(x=>x.kind='std'); B.styles.forEach(x=>x.kind='print');
+  const styles=[...A.styles,...B.styles].sort((a,b)=>(a.no-b.no)||((a.part||0)-(b.part||0)));
+  return {...H,mode:'mix',styles,m:A.m,cw:A.cw,mc:B.mc,grand:A.grand+B.grand};
+}
+async function collectP(list){
+  const styles=[];
+  for(const s of list){
+    const no=S.styles.indexOf(s)+1;
     const zs=[...s.sizes].sort((a,b)=>rank(a.n)-rank(b.n)), labels=zs.map(z=>z.n), N=Math.max(1,labels.length);
     let src=s.prints.filter(p=>p.img||p.name.trim()||labels.some(n=>+p.q[n])); if(!src.length)src=[newPrint()];
     const parts=Math.ceil(src.length/PMAX), per=Math.ceil(src.length/parts), so=s.sp[0]||null, sobuf=so?await so.blob.arrayBuffer():null;
@@ -920,81 +962,175 @@ async function collectP(){
       const prints=[];
       for(const p of src.slice(ci*per,(ci+1)*per)){const q=labels.map(n=>+p.q[n]||0);
         prints.push({name:p.name.trim().toUpperCase(),q,tot:q.reduce((a,b)=>a+b,0),th:p.img?await compose([p.img],PT,PT,1,false):null})}
-      styles.push({no,labels,prints,name:s.name.trim().toUpperCase()+(ci?CONT:''),code:s.code.trim().replace(/[()]/g,'').toUpperCase(),note:(s.note||'').trim(),
+      styles.push({no,part:ci,labels,prints,name:s.name.trim().toUpperCase()+(ci?CONT:''),code:s.code.trim().replace(/[()]/g,'').toUpperCase(),note:(s.note||'').trim(),
         so:so?{buf:sobuf,w:so.w,h:so.h,ext:so.ext}:null, sb, soi:so,
         row:labels.map((n,j)=>prints.reduce((a,p)=>a+p.q[j],0)), tot:prints.reduce((a,p)=>a+p.tot,0)});
     }
   }
-  const country=$('country').value.trim().toUpperCase();
-  return {mode:'print',cust:country?cust+' - '+country:cust,dtxt:`${d}-${mo}-${y}`,styles,mc:Math.max(6,...styles.map(s=>s.prints.length)),grand:styles.reduce((a,s)=>a+s.tot,0)};
+  return {styles,mc:Math.max(6,...styles.map(s=>s.prints.length)),grand:styles.reduce((a,s)=>a+s.tot,0)};
+}
+async function collectS(list){
+  const nsz=Math.max(1,...list.map(s=>s.sizes.length)), styles=[]; let lastBuf=null, lastCp=[];
+  for(const [k,s] of list.entries()){
+    const idx=S.styles.indexOf(s), zs=[...s.sizes].sort((a,b)=>rank(a.n)-rank(b.n)), labels=zs.map(z=>z.n), q=zs.map(z=>+z.q||0);
+    // "same colour picture as previous style" only when the previous style is also style-wise
+    let cb=null, cpl=s.cp; if(idx>0&&s.same&&lastBuf&&list[k-1]===S.styles[idx-1]){cb=lastBuf; cpl=lastCp} else if(s.cp.length){cb=await compose(s.cp,CW,AH,4); lastBuf=cb; lastCp=s.cp}
+    const so=s.sp[0]||null;
+    // originals of every colour picture, kept separately so a re-import gets each picture back (not the collage)
+    const cps=await Promise.all(cpl.map(keepPic));
+    styles.push({no:idx+1,q,labels,note:(s.note||'').trim(),name:s.name.trim().toUpperCase(),code:s.code.trim().replace(/[()]/g,'').toUpperCase(),
+      so:so?{buf:await so.blob.arrayBuffer(),w:so.w,h:so.h,ext:so.ext}:null,
+      sb:so?await compose([so],SW,AH,6,'inset'):null, cb, cps, cpi:cpl, soi:so, spk:so?await keepPic(so):null});
+  }
+  styles.forEach(s=>{s.tot=s.q.reduce((a,b)=>a+b,0)});
+  const cw=Array.from({length:nsz},(_,j)=>Math.max(4.5,...styles.map(s=>s.labels[j]?s.labels[j].length*1.3+1.5:0)));
+  return {styles,m:nsz,cw,grand:styles.reduce((a,s)=>a+s.tot,0)};
 }
 
-async function buildXlsxP(D){
-  const mc=D.mc, TC=5+mc, wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('ORDER SHEET');
-  const col=n=>ws.getColumn(n).letter, W=pwChars(mc);
-  // pages follow the shared plan; rows are lowered by f (width untouched); scale only drops if a page would still not fit
-  const pl=getPlan(D), f=pl.f, lastOf=new Set(pl.pages.slice(0,-1).map(p=>p[p.length-1])), bhX=s=>(15.95+48+24+s.labels.length*15.95+15.95)*f+6.75;
-  const at=f<1?await Promise.all(D.styles.map(s=>picsAt(s,f))):null, PTf=Math.round(PT*f);
-  const phX=pl.pages.map((p,k)=>(k?0:50.25)+p.reduce((a,i)=>a+bhX(D.styles[i]),0)+(k===pl.pages.length-1?32:0));
-  const scale=Math.max(25,Math.min(Math.max(40,Math.min(80,Math.floor(80*115/W.reduce((a,b)=>a+b)))),Math.floor(100*(841.9-.6*72)/Math.max(...phX))));
-  ws.columns=W.map(w=>({width:w}));
+// ---- Excel: one builder for style-wise, print-wise and mixed sheets ----
+// A mixed sheet stretches both layouts to the same width and cuts real columns at every edge of either,
+// so each style keeps its own look; layout column c covers real columns map[c][0]..map[c][1].
+function colGrid(D){
+  const ks=new Set(D.styles.map(x=>kindOf(D,x))), WS=ks.has('std')?stdChars(D):null, WP=ks.has('print')?pwChars(D.mc):null;
+  const idm=W=>[null,...W.map((_,k)=>[k+1,k+1])];
+  if(!WP) return {cols:WS,map:{std:idm(WS)}};
+  if(!WS) return {cols:WP,map:{print:idm(WP)}};
+  const T=Math.max(WS.reduce((a,b)=>a+b),WP.reduce((a,b)=>a+b));
+  const edges=W=>{const k=T/W.reduce((a,b)=>a+b); let x=0; return W.map(w=>x+=w*k)};
+  const ES=edges(WS), EP=edges(WP), all=[...ES,...EP].sort((a,b)=>a-b), cut=[];
+  all.forEach(e=>{if(!cut.length||e-cut[cut.length-1]>.4)cut.push(e)});
+  const near=e=>{let b=0;cut.forEach((c,i)=>{if(Math.abs(c-e)<Math.abs(cut[b]-e))b=i});return b};
+  const mk=E=>{const m=[null]; let s=0; E.forEach(e=>{const t=near(e); m.push([s+1,t+1]); s=t+1}); return m};
+  let x=0; const cols=cut.map(c=>{const w=c-x; x=c; return w});
+  return {cols,map:{std:mk(ES),print:mk(EP)}};
+}
+async function buildXlsx(D){
+  const wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('ORDER SHEET'), G=colGrid(D), NC=G.cols.length;
+  const letter=n=>ws.getColumn(n).letter;
+  ws.columns=G.cols.map(w=>({width:w}));
+  const pl=getPlan(D), f=pl.f, lastOf=new Set(pl.pages.slice(0,-1).map(p=>p[p.length-1]));
+  const RHs=+(15.95*f).toFixed(2), PH=+(48*f).toFixed(2), NH=+(24*f).toFixed(2), PTf=Math.round(PT*f);
+  const hX=x=>kindOf(D,x)==='std'?11*RHs+6.75:(15.95+48+24+x.labels.length*15.95+15.95)*f+6.75;
+  const phX=pl.pages.map((p,k)=>(k?0:50.25)+p.reduce((a,i)=>a+hX(D.styles[i]),0)+(k===pl.pages.length-1?32:0));
+  const sum=G.cols.reduce((a,b)=>a+b,0);
+  const wScale=D.mode==='std'?(D.m>5?Math.max(40,80-(D.m-5)*3):80):Math.max(40,Math.min(80,Math.floor(80*115/sum)));
+  const scale=Math.max(25,Math.min(wScale,Math.floor(100*(841.9-.6*72)/Math.max(...phX))));
   ws.pageSetup={paperSize:9,orientation:'portrait',scale,horizontalCentered:true,margins:{left:.4,right:.4,top:.3,bottom:.3,header:.1,footer:.1}};
-  ws.getRow(2).height=20.25; ws.mergeCells(2,1,2,TC);
+  ws.getRow(2).height=20.25; ws.mergeCells(2,1,2,NC);
   const t=ws.getCell('A2'); t.value=`${D.cust} ${D.dtxt}`; t.font={bold:true,size:14}; t.alignment={horizontal:'center',vertical:'middle'};
-  for(let c=1;c<=TC;c++) ws.getCell(2,c).border=border;
-  const put=(r,c,v,o={})=>{const x=ws.getCell(r,c);x.value=v;x.alignment={horizontal:o.h||'center',vertical:o.v||'middle'};if(o.b)x.font={bold:true};return x};
-  const RH=+(15.95*f).toFixed(2), PH=+(48*f).toFixed(2), NH=+(24*f).toFixed(2), off=(1-PTf/(9.5*7+5))/2; let r=FIRST; const totCells=[];
+  for(let c=1;c<=NC;c++) ws.getCell(2,c).border=border;
+  const at=f<1?await Promise.all(D.styles.map(s=>picsAt(s,f))):null;
+  const mcv=document.createElement('canvas').getContext('2d'); mcv.font='bold 14.67px Calibri, Carlito, Arial, sans-serif';
+  const xfit=t=>mcv.measureText(t).width<=126;
+  const totCells=[], colsOut=[]; let r=FIRST;
   D.styles.forEach((s,idx)=>{
-    const N=s.labels.length, last=r+3+N;   // r header, r+1 photos, r+2 names, r+3.. sizes, last = TOTAL
-    if(lastOf.has(idx)) ws.getRow(last+1).addPageBreak();
-    for(let k=r;k<=last;k++){ws.getRow(k).height=k===r+1?PH:k===r+2?NH:RH; for(let c=1;c<=TC;c++)ws.getCell(k,c).border=border}
-    ws.getRow(last+1).height=6.75;
-    for(let c=1;c<=TC;c++) ws.getCell(last+1,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFC000'}};
-    put(r,1,s.no); put(r,2,'STYLE'); put(r,3,'Description',{h:'left'}); put(r,4,'SIZE'); put(r,5,'PRINTS'); put(r,TC,'Total');
-    ws.mergeCells(r,5,r,4+mc);
-    [1,2].forEach(c=>ws.mergeCells(r+1,c,last,c)); ws.mergeCells(r+1,4,r+2,4); ws.mergeCells(r+1,TC,r+2,TC);
-    if(s.note){ws.mergeCells(r+1,3,r+2,3); ws.mergeCells(r+3,3,last,3);
-      const nt=ws.getCell(r+3,3); nt.value=s.note; nt.font={bold:true}; nt.alignment={horizontal:'left',vertical:'top',wrapText:true};
-      for(let k=r+3;k<=last;k++)ws.getCell(k,3).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFF00'}}}
-    else ws.mergeCells(r+1,3,last,3);
-    const dc=ws.getCell(r+1,3); dc.value=[s.name,s.code?`(${s.code})`:''].filter(Boolean).join('\n'); dc.font={bold:true}; dc.alignment={horizontal:'left',vertical:'top',wrapText:true};
-    s.prints.forEach((pr,k)=>{const c=5+k, L=col(c);
-      if(pr.th){const id=wb.addImage({buffer:pr.th,extension:'jpeg'}); ws.addImage(id,{tl:{col:c-1+off,row:r+.04},ext:{width:PTf,height:PTf},editAs:'oneCell'})}
-      const nc=ws.getCell(r+2,c); nc.value=pr.name; nc.font={bold:true,size:8}; nc.alignment={horizontal:'center',vertical:'middle',wrapText:true};
-      s.labels.forEach((lab,j)=>{put(r+3+j,c,pr.q[j]||'-',{b:1})});
-      const x=put(last,c,{formula:`SUM(${L}${r+3}:${L}${last-1})`,result:pr.tot}); x.font={color:{argb:'FFFF0000'},size:9}});
-    s.labels.forEach((lab,j)=>{const rr=r+3+j; put(rr,4,lab,{b:1}); put(rr,TC,{formula:`SUM(${col(5)}${rr}:${col(4+mc)}${rr})`,result:s.row[j]},{b:1})});
-    put(last,4,'TOTAL',{b:1});
-    put(last,TC,{formula:`SUM(${col(TC)}${r+3}:${col(TC)}${last-1})`,result:s.tot},{b:1}); totCells.push(col(TC)+last);
-    const sb=at?at[idx].sb:s.sb;
-    if(sb){const id=wb.addImage({buffer:sb,extension:'png'}); ws.addImage(id,{tl:{col:1,row:r},br:{col:2,row:last},editAs:'twoCell'})}
-    r=last+2;
+    const kind=kindOf(D,s), map=G.map[kind], TC=map.length-1, F=c=>map[c][0], E=c=>map[c][1], L=c=>letter(F(c));
+    const merges=[], mg=(r1,c1,r2,c2)=>merges.push([r1,c1,r2,c2]);
+    const put=(rr,c,v,o={})=>{const x=ws.getCell(rr,F(c));x.value=v;x.alignment={horizontal:o.h||'center',vertical:o.v||'middle'};if(o.b)x.font={bold:true};return x};
+    const box=(r1,r2)=>{for(let k=r1;k<=r2;k++)for(let c=F(1);c<=E(TC);c++)ws.getCell(k,c).border=border};
+    const band=rr=>{ws.getRow(rr).height=6.75; for(let c=F(1);c<=E(TC);c++) ws.getCell(rr,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFC000'}}};
+    const colAt=(c,px)=>{let k=F(c); while(k<E(c)&&px>G.cols[k-1]*7+5){px-=G.cols[k-1]*7+5;k++} return k-1+Math.max(0,Math.min(.99,px/(G.cols[k-1]*7+5)))};
+    let r2;
+    if(kind==='std'){
+      r2=r+10;
+      for(let k=0;k<11;k++)ws.getRow(r+k).height=RHs; box(r,r+10); band(r+11);
+      [1,2,3].forEach(c=>mg(r+1,c,r+10,c));
+      put(r,1,s.no); put(r,2,'STYLE'); put(r,3,'COLORS'); put(r,4,'Description',{h:'left'}); put(r,TC,'Total');
+      descLines(s,xfit).forEach((l,k)=>{const x=put(r+1+k,4,l.t,{h:l.k==='c'?'center':'left',b:1}); if(l.k==='t'){x.font={bold:true,color:{argb:NOTEC}};for(let c=F(4);c<=E(4);c++)ws.getCell(r+1+k,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFF00'}}}});
+      s.labels.forEach((lab,j)=>{const c=5+j;
+        put(r+1,c,lab,{b:1}); put(r+2,c,s.q[j]||'-',{b:1});
+        const tc=put(r+5,c,{formula:`SUM(${L(c)}${r+2}:${L(c)}${r+4})`,result:s.q[j]}); tc.font={color:{argb:'FFFF0000'},size:9}});
+      put(r+5,TC,{formula:`SUM(${L(5)}${r+5}:${L(TC-1)}${r+5})`,result:s.tot},{b:1}); totCells.push(L(TC)+(r+5));
+      put(r+7,4,'your Ref.',{h:'left',v:'top'});
+      const sb=at?at[idx].sb:s.sb, cb=at?at[idx].cb:s.cb;
+      if(sb){const id=wb.addImage({buffer:sb,extension:'png'}); ws.addImage(id,{tl:{col:F(2)-1,row:r},br:{col:E(2),row:r+10},editAs:'twoCell'})}
+      if(cb){const id=wb.addImage({buffer:cb,extension:'jpeg'}); ws.addImage(id,{tl:{col:F(3)-1,row:r},ext:{width:CW,height:Math.round(AH*f)},editAs:'oneCell'})}
+      if(lastOf.has(idx)) ws.getRow(r+11).addPageBreak();
+    } else {
+      const mc=TC-5, N=s.labels.length, last=r+3+N; r2=last;   // r header, r+1 photos, r+2 names, r+3.. sizes, last = TOTAL
+      if(lastOf.has(idx)) ws.getRow(last+1).addPageBreak();
+      for(let k=r;k<=last;k++)ws.getRow(k).height=k===r+1?PH:k===r+2?NH:RHs; box(r,last); band(last+1);
+      put(r,1,s.no); put(r,2,'STYLE'); put(r,3,'Description',{h:'left'}); put(r,4,'SIZE'); put(r,5,'PRINTS'); put(r,TC,'Total');
+      mg(r,5,r,4+mc);
+      [1,2].forEach(c=>mg(r+1,c,last,c)); mg(r+1,4,r+2,4); mg(r+1,TC,r+2,TC);
+      if(s.note){mg(r+1,3,r+2,3); mg(r+3,3,last,3);
+        const nt=put(r+3,3,s.note); nt.font={bold:true}; nt.alignment={horizontal:'left',vertical:'top',wrapText:true};
+        for(let k=r+3;k<=last;k++)for(let c=F(3);c<=E(3);c++)ws.getCell(k,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFF00'}}}
+      else mg(r+1,3,last,3);
+      const dc=put(r+1,3,[s.name,s.code?`(${s.code})`:''].filter(Boolean).join('\n')); dc.font={bold:true}; dc.alignment={horizontal:'left',vertical:'top',wrapText:true};
+      s.prints.forEach((pr,k)=>{const c=5+k;
+        if(pr.th){let wpx=0; for(let q=F(c);q<=E(c);q++)wpx+=G.cols[q-1]*7+5;
+          const id=wb.addImage({buffer:pr.th,extension:'jpeg'}); ws.addImage(id,{tl:{col:colAt(c,(wpx-PTf)/2),row:r+.04},ext:{width:PTf,height:PTf},editAs:'oneCell'})}
+        const nc=put(r+2,c,pr.name); nc.font={bold:true,size:8}; nc.alignment={horizontal:'center',vertical:'middle',wrapText:true};
+        s.labels.forEach((lab,j)=>{put(r+3+j,c,pr.q[j]||'-',{b:1})});
+        const x=put(last,c,{formula:`SUM(${L(c)}${r+3}:${L(c)}${last-1})`,result:pr.tot}); x.font={color:{argb:'FFFF0000'},size:9}});
+      s.labels.forEach((lab,j)=>{const rr=r+3+j; put(rr,4,lab,{b:1}); put(rr,TC,{formula:`SUM(${L(5)}${rr}:${L(4+mc)}${rr})`,result:s.row[j]},{b:1})});
+      put(last,4,'TOTAL',{b:1});
+      put(last,TC,{formula:`SUM(${L(TC)}${r+3}:${L(TC)}${last-1})`,result:s.tot},{b:1}); totCells.push(L(TC)+last);
+      const sb=at?at[idx].sb:s.sb;
+      if(sb){const id=wb.addImage({buffer:sb,extension:'png'}); ws.addImage(id,{tl:{col:F(2)-1,row:r},br:{col:E(2),row:last},editAs:'twoCell'})}
+    }
+    // merges: the planned ones, then every other layout cell that covers several real columns
+    const inM=(rr,c)=>merges.some(([a,b,c2,d])=>rr>=a&&rr<=c2&&c>=b&&c<=d);
+    merges.forEach(([a,b,c2,d])=>{if(a!==c2||F(b)!==E(d))ws.mergeCells(a,F(b),c2,E(d))});
+    for(let rr=r;rr<=r2;rr++)for(let c=1;c<=TC;c++) if(!inM(rr,c)&&E(c)>F(c)) ws.mergeCells(rr,F(c),rr,E(c));
+    colsOut.push([r,...map.slice(1).map(x=>x[0])]);
+    r=r2+2;
   });
-  shrinkFonts(ws,f);
-  const gr=r+1;
-  ws.getCell(gr,3).value='GRAND TOTAL'; ws.getCell(gr,3).font={bold:true}; ws.getCell(gr,3).alignment={horizontal:'right'};
-  ws.mergeCells(gr,5,gr,4+mc);
-  const g=ws.getCell(gr,5); g.value={formula:totCells.join('+'),result:D.grand};
+  const gr=r+1, gm=G.map[D.mode==='std'?'std':'print'], gF=c=>gm[c][0], gE=c=>gm[c][1];
+  const lastP=D.mode==='std'?4+D.m:4+D.mc;
+  if(D.mode==='std'){ws.getCell(gr,gF(4)).value='GRAND TOTAL'; ws.getCell(gr,gF(4)).font={bold:true}}
+  else{ws.getCell(gr,gF(3)).value='GRAND TOTAL'; ws.getCell(gr,gF(3)).font={bold:true}; ws.getCell(gr,gF(3)).alignment={horizontal:'right'}}
+  ws.mergeCells(gr,gF(5),gr,gE(lastP));
+  const g=ws.getCell(gr,gF(5)); g.value={formula:totCells.join('+'),result:D.grand};
   g.font={bold:true}; g.alignment={horizontal:'center'};
-  ws.pageSetup.printArea=`A1:${col(TC)}${gr}`;
+  ws.pageSetup.printArea=`A1:${letter(NC)}${gr}`;
   if(pl.pages.length>1)ws.headerFooter.oddFooter='&C&8Page &P of &N';
+  shrinkFonts(ws,f);
+  // hidden sheet with the original pictures of style-wise blocks: row = block, column B = style picture, C.. = each colour picture
+  if(D.styles.some(x=>kindOf(D,x)==='std')){
+    const ph=wb.addWorksheet(PICS); ph.state='veryHidden';
+    D.styles.forEach((s,idx)=>{ if(kindOf(D,s)!=='std')return;
+      ph.getCell(idx+1,1).value=idx+1;
+      const add=(p,c)=>{const id=wb.addImage({buffer:p.buf,extension:p.ext==='png'?'png':'jpeg'}); ph.addImage(id,{tl:{col:c,row:idx},ext:{width:40,height:40},editAs:'oneCell'})};
+      if(s.spk) add(s.spk,1);
+      (s.cps||[]).forEach((p,j)=>add(p,2+j));
+    });
+  }
+  if(D.mode==='mix'){const cs=wb.addWorksheet(COLS); cs.state='veryHidden'; colsOut.forEach((a,k)=>{cs.getRow(k+1).values=a})}
   return new Blob([await wb.xlsx.writeBuffer()],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
 }
 
-async function buildPdfP(D){
-  const {jsPDF}=window.jspdf, doc=new jsPDF({unit:'pt',format:'a4'}), mc=D.mc;
-  const M=22, PW=595-2*M, chars=pwChars(mc), sum=chars.reduce((a,b)=>a+b);
-  const X=[M]; chars.forEach(c=>X.push(X[X.length-1]+c/sum*PW));
-  const TH=24, GAP=5, RH=13, PH=40, NH=17, nc=chars.length, TC=nc-1, BOT=842-M, P0=4;   // P0 = first print column
-  const pl=getPlan(D), f=pl.f, fk=fontK(f), ty=y=>M+(y-M)*f;   // rows lowered by f, width stays full
+// ---- PDF: one builder for style-wise, print-wise and mixed sheets; rows lowered by f, width stays full ----
+async function buildPdf(D){
+  const {jsPDF}=window.jspdf, doc=new jsPDF({unit:'pt',format:'a4'});
+  const M=22, PW=595-2*M, TH=24, GAP=5, BOT=842-M;
+  const xs=chars=>{const sum=chars.reduce((a,b)=>a+b), X=[M]; chars.forEach(c=>X.push(X[X.length-1]+c/sum*PW)); return X};
+  const ks=new Set(D.styles.map(x=>kindOf(D,x))), XS=ks.has('std')?xs(stdChars(D)):null, XP=ks.has('print')?xs(pwChars(D.mc)):null;
+  const BH=(842-2*M-TH-26)/5, rh=(BH-GAP)/11, RH=13, PH=40, NH=17;
+  const pl=getPlan(D), f=pl.f, fk=fontK(f), ty=y=>M+(y-M)*f;
   const T=(s,x,y,o={})=>{doc.setFont('helvetica',o.b?'bold':'normal');doc.setFontSize((o.sz||8)*fk);doc.setTextColor(...(o.c||[0,0,0]));doc.text(String(s),x,ty(y),{align:o.a||'center',baseline:'middle'})};
-  const mid=c=>(X[c]+X[c+1])/2, line=(x1,y1,x2,y2)=>doc.line(x1,ty(y1),x2,ty(y2)), R=(x,y,w,h,st)=>doc.rect(x,ty(y),w,h*f,st);
+  const line=(x1,y1,x2,y2)=>doc.line(x1,ty(y1),x2,ty(y2)), R=(x,y,w,h,st)=>doc.rect(x,ty(y),w,h*f,st);
   const fitW=(w,sz)=>t=>{doc.setFont('helvetica','bold');doc.setFontSize((sz||8)*fk);return doc.getTextWidth(t)<=w};
   const pic=(buf,asp,cx,cy,cw,ch,fmt)=>{ch*=f; let w=cw,h=cw/asp; if(h>ch){h=ch;w=ch*asp}
     doc.addImage(new Uint8Array(buf),fmt||'JPEG',cx+(cw-w)/2,ty(cy)+(ch-h)/2,w,h)};
-  const head=()=>{doc.setLineWidth(.5);doc.setDrawColor(0);R(M,M,PW,TH);T(`${D.cust} ${D.dtxt}`,M+PW/2,M+TH/2,{b:1,sz:13})};
-  let y=M+TH;
-  pl.pages.forEach((pg,pi)=>{ if(pi)doc.addPage(); head(); y=M+TH; pg.forEach(i=>{ const s=D.styles[i];
+  const at=f<1?await Promise.all(D.styles.map(s=>kindOf(D,s)==='std'?picsAt(s,f):null)):null;
+  const drawStd=(s,y0,i)=>{const X=XS, nc=X.length-1, TC=nc-1, mid=c=>(X[c]+X[c+1])/2, ry=r=>y0+(r+.5)*rh;
+    const pfit=fitW(X[4]-X[3]-5);
+    doc.setFillColor(255,192,0); R(M,y0+11*rh,PW,GAP,'F');
+    R(M,y0,PW,11*rh);
+    for(let c=1;c<nc;c++) line(X[c],y0,X[c],y0+11*rh);
+    for(let r=1;r<11;r++) line(X[3],y0+r*rh,X[nc],y0+r*rh);
+    line(X[0],y0+rh,X[3],y0+rh);
+    T(s.no,mid(0),ry(0)); T('STYLE',mid(1),ry(0)); T('COLORS',mid(2),ry(0)); T('Description',X[3]+2,ry(0),{a:'left'}); T('Total',mid(TC),ry(0));
+    descLines(s,pfit).forEach((l,k)=>{if(l.k==='t'){doc.setFillColor(255,255,0);R(X[3]+.4,y0+(1+k)*rh+.4,X[4]-X[3]-.8,rh-.8,'F')}
+      l.k==='c'?T(l.t,mid(3),ry(1+k),{b:1}):T(l.t,X[3]+2,ry(1+k),{a:'left',b:1})});
+    s.labels.forEach((lab,j)=>{const c=4+j; T(lab,mid(c),ry(1),{b:1}); T(s.q[j]||'-',mid(c),ry(2),{b:1}); T(s.q[j],mid(c),ry(5),{c:[255,0,0],sz:7})});
+    T(s.tot,mid(TC),ry(5),{b:1}); T('your Ref.',X[3]+2,ry(7),{a:'left'});
+    if(s.so) pic(s.so.buf,s.so.w/s.so.h,X[1]+4,y0+rh+4,X[2]-X[1]-8,10*rh-8,s.so.ext==='png'?'PNG':'JPEG');
+    const cb=at?at[i].cb:s.cb; if(cb) pic(cb,CW/(at?Math.round(AH*f):AH),X[2]+1,y0+rh+1,X[3]-X[2]-2,10*rh-2);
+    return BH};
+  const drawPrint=(s,y)=>{const X=XP, nc=X.length-1, TC=nc-1, P0=4, mid=c=>(X[c]+X[c+1])/2;
     const N=s.labels.length, bh=RH+PH+NH+N*RH+RH+GAP;
     const y1=y+RH, y2=y1+PH, y3=y2+NH, y4=y3+N*RH, y5=y4+RH;   // header | photos | names | sizes | total
     if(s.note){doc.setFillColor(255,255,0); R(X[2],y3,X[3]-X[2],y5-y3,'F')}
@@ -1019,128 +1155,16 @@ async function buildPdfP(D){
       T(pr.tot,mid(c),y4+RH/2,{c:[255,0,0],sz:7})});
     s.labels.forEach((lab,j)=>{const cy=y3+(j+.5)*RH; T(lab,mid(3),cy,{b:1}); T(s.row[j],mid(TC),cy,{b:1})});
     T('TOTAL',mid(3),y4+RH/2,{b:1,sz:7}); T(s.tot,mid(TC),y4+RH/2,{b:1});
-    y+=bh;
-  })});
-  y+=6; if(ty(y+16)>BOT){doc.addPage();y=M}
-  T('GRAND TOTAL',X[3]-3,y+8,{a:'right',b:1,sz:9}); T(D.grand,(X[P0]+X[TC])/2,y+8,{b:1,sz:9});
-  pageNums(doc);
-  return doc.output('blob');
-}
-
-async function collect(){
-  if(S.mode==='print')return collectP();
-  const cust=$('cust').value.trim().toUpperCase();
-  if(!cust){toast('Enter the customer name');$('cust').focus();return null}
-  if(!S.styles.length){toast('Add at least one style first');return null}
-  const nsz=Math.max(0,...S.styles.map(s=>s.sizes.length));
-  if(!nsz){toast('Keep at least one size');return null}
-  if(!$('date').value) $('date').value=today();
-  const [y,m,d]=$('date').value.split('-'), styles=[]; let lastBuf=null, lastCp=[];
-  for(const [idx,s] of S.styles.entries()){
-    const zs=[...s.sizes].sort((a,b)=>rank(a.n)-rank(b.n)), labels=zs.map(z=>z.n), q=zs.map(z=>+z.q||0);
-    let cb=null, cpl=s.cp; if(idx>0&&s.same&&lastBuf){cb=lastBuf; cpl=lastCp} else if(s.cp.length){cb=await compose(s.cp,CW,AH,4); lastBuf=cb; lastCp=s.cp}
-    const so=s.sp[0]||null;
-    // originals of every colour picture, kept separately so a re-import gets each picture back (not the collage)
-    const cps=await Promise.all(cpl.map(keepPic));
-    styles.push({q,labels,note:(s.note||'').trim(),name:s.name.trim().toUpperCase(),code:s.code.trim().replace(/[()]/g,'').toUpperCase(),
-      so:so?{buf:await so.blob.arrayBuffer(),w:so.w,h:so.h,ext:so.ext}:null,
-      sb:so?await compose([so],SW,AH,6,'inset'):null, cb, cps, cpi:cpl, soi:so, spk:so?await keepPic(so):null});
-  }
-  styles.forEach(s=>{s.tot=s.q.reduce((a,b)=>a+b,0)});
-  const cw=Array.from({length:nsz},(_,j)=>Math.max(4.5,...styles.map(s=>s.labels[j]?s.labels[j].length*1.3+1.5:0)));
-  const country=$('country').value.trim().toUpperCase();
-  return {cust:country?cust+' - '+country:cust,dtxt:`${d}-${m}-${y}`,styles,m:nsz,cw,grand:styles.reduce((a,s)=>a+s.tot,0)};
-}
-
-async function buildXlsx(D){
-  if(D.mode==='print')return buildXlsxP(D);
-  const m=D.m, TC=5+m, wb=new ExcelJS.Workbook(), ws=wb.addWorksheet('ORDER SHEET');
-  const col=n=>ws.getColumn(n).letter, n=D.styles.length;
-  ws.columns=[2.7,15.4,52.6,19.3,...D.cw,5.4].map(w=>({width:w}));
-  // pages follow the shared plan; rows are lowered by f (width untouched); scale only drops if a page would still not fit
-  const pl=getPlan(D), f=pl.f, lastOf=new Set(pl.pages.slice(0,-1).map(p=>p[p.length-1])), RHs=+(15.95*f).toFixed(2), BHX=11*RHs+6.75;
-  const at=f<1?await Promise.all(D.styles.map(s=>picsAt(s,f))):null;
-  const phX=pl.pages.map((p,k)=>(k?0:50.25)+p.length*BHX+(k===pl.pages.length-1?32:0));
-  const scale=Math.max(25,Math.min(m>5?Math.max(40,80-(m-5)*3):80,Math.floor(100*(841.9-.6*72)/Math.max(...phX))));
-  ws.pageSetup={paperSize:9,orientation:'portrait',scale,horizontalCentered:true,margins:{left:.4,right:.4,top:.3,bottom:.3,header:.1,footer:.1}};
-  ws.getRow(2).height=20.25; ws.mergeCells(2,1,2,TC);
-  const t=ws.getCell('A2'); t.value=`${D.cust} ${D.dtxt}`; t.font={bold:true,size:14}; t.alignment={horizontal:'center',vertical:'middle'};
-  for(let c=1;c<=TC;c++) ws.getCell(2,c).border=border;
-  const mc=document.createElement('canvas').getContext('2d'); mc.font='bold 14.67px Calibri, Carlito, Arial, sans-serif';
-  const xfit=t=>mc.measureText(t).width<=126;
-  const put=(r,c,v,o={})=>{const x=ws.getCell(r,c);x.value=v;x.alignment={horizontal:o.h||'center',vertical:o.v||'middle'};if(o.b)x.font={bold:true};return x};
-  D.styles.forEach((s,idx)=>{
-    const i=idx+1, r=FIRST+idx*B;
-    for(let k=0;k<11;k++){ws.getRow(r+k).height=RHs;for(let c=1;c<=TC;c++)ws.getCell(r+k,c).border=border}
-    ws.getRow(r+11).height=6.75;
-    for(let c=1;c<=TC;c++) ws.getCell(r+11,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFC000'}};
-    [1,2,3].forEach(c=>ws.mergeCells(r+1,c,r+10,c));
-    put(r,1,i); put(r,2,'STYLE'); put(r,3,'COLORS'); put(r,4,'Description',{h:'left'}); put(r,TC,'Total');
-    descLines(s,xfit).forEach((l,k)=>{const x=put(r+1+k,4,l.t,{h:l.k==='c'?'center':'left',b:1}); if(l.k==='t'){x.font={bold:true,color:{argb:NOTEC}};x.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFF00'}}}});
-    s.labels.forEach((lab,j)=>{const c=5+j, L=col(c);
-      put(r+1,c,lab,{b:1}); put(r+2,c,s.q[j]||'-',{b:1});
-      const tc=put(r+5,c,{formula:`SUM(${L}${r+2}:${L}${r+4})`,result:s.q[j]}); tc.font={color:{argb:'FFFF0000'},size:9}});
-    put(r+5,TC,{formula:`SUM(${col(5)}${r+5}:${col(TC-1)}${r+5})`,result:s.tot},{b:1});
-    put(r+7,4,'your Ref.',{h:'left',v:'top'});
-    const sb=at?at[idx].sb:s.sb, cb=at?at[idx].cb:s.cb;
-    if(sb){const id=wb.addImage({buffer:sb,extension:'png'}); ws.addImage(id,{tl:{col:1,row:r},br:{col:2,row:r+10},editAs:'twoCell'})}
-    if(cb){const id=wb.addImage({buffer:cb,extension:'jpeg'}); ws.addImage(id,{tl:{col:2,row:r},ext:{width:CW,height:Math.round(AH*f)},editAs:'oneCell'})}
-    if(lastOf.has(idx)) ws.getRow(r+11).addPageBreak();
-  });
-  shrinkFonts(ws,f);
-  const tr=FIRST+n*B+1;
-  ws.getCell(tr,4).value='GRAND TOTAL'; ws.getCell(tr,4).font={bold:true};
-  ws.mergeCells(tr,5,tr,4+m);
-  const g=ws.getCell(tr,5); g.value={formula:D.styles.map((s,idx)=>col(TC)+(FIRST+idx*B+5)).join('+'),result:D.grand};
-  g.font={bold:true}; g.alignment={horizontal:'center'};
-  ws.pageSetup.printArea=`A1:${col(TC)}${tr}`;
-  if(pl.pages.length>1)ws.headerFooter.oddFooter='&C&8Page &P of &N';
-  // hidden sheet with the original pictures: row = style, column A = style picture, B.. = each colour picture
-  const ph=wb.addWorksheet(PICS); ph.state='veryHidden';
-  D.styles.forEach((s,idx)=>{
-    ph.getCell(idx+1,1).value=idx+1;
-    const add=(p,c)=>{const id=wb.addImage({buffer:p.buf,extension:p.ext==='png'?'png':'jpeg'}); ph.addImage(id,{tl:{col:c,row:idx},ext:{width:40,height:40},editAs:'oneCell'})};
-    if(s.spk) add(s.spk,1);
-    (s.cps||[]).forEach((p,j)=>add(p,2+j));
-  });
-  return new Blob([await wb.xlsx.writeBuffer()],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-}
-
-async function buildPdf(D){
-  if(D.mode==='print')return buildPdfP(D);
-  const {jsPDF}=window.jspdf, doc=new jsPDF({unit:'pt',format:'a4'}), m=D.m;
-  const M=22, PW=595-2*M, chars=[2.7,15.4,52.6,19.3,...D.cw,5.4], sum=chars.reduce((a,b)=>a+b);
-  const X=[M]; chars.forEach(c=>X.push(X[X.length-1]+c/sum*PW));
-  const TH=24, GAP=5, BH=(842-2*M-TH-26)/5, rh=(BH-GAP)/11, nc=chars.length, TC=nc-1;
-  const pl=getPlan(D), f=pl.f, fk=fontK(f), ty=y=>M+(y-M)*f;   // rows lowered by f, width stays full
-  const T=(s,x,y,o={})=>{doc.setFont('helvetica',o.b?'bold':'normal');doc.setFontSize((o.sz||8)*fk);doc.setTextColor(...(o.c||[0,0,0]));doc.text(String(s),x,ty(y),{align:o.a||'center',baseline:'middle'})};
-  const mid=c=>(X[c]+X[c+1])/2, line=(x1,y1,x2,y2)=>doc.line(x1,ty(y1),x2,ty(y2)), R=(x,y,w,h,st)=>doc.rect(x,ty(y),w,h*f,st);
-  const pic=(buf,asp,cx,cy,cw,ch,fmt)=>{ch*=f; let w=cw,h=cw/asp; if(h>ch){h=ch;w=ch*asp}
-    doc.addImage(new Uint8Array(buf),fmt||'JPEG',cx+(cw-w)/2,ty(cy)+(ch-h)/2,w,h)};
-  const pfit=t=>{doc.setFont('helvetica','bold');doc.setFontSize(8*fk);return doc.getTextWidth(t)<=X[4]-X[3]-5};
-  const at=f<1?await Promise.all(D.styles.map(s=>picsAt(s,f))):null;   // collages re-made at the lower height
+    return bh};
+  let y=M+TH;
   pl.pages.forEach((pg,pi)=>{
     if(pi) doc.addPage(); doc.setLineWidth(.5); doc.setDrawColor(0);
     R(M,M,PW,TH); T(`${D.cust} ${D.dtxt}`,M+PW/2,M+TH/2,{b:1,sz:13});
-    pg.forEach((i,k)=>{ const s=D.styles[i];
-    const y0=M+TH+k*BH;
-    doc.setFillColor(255,192,0); R(M,y0+11*rh,PW,GAP,'F');
-    R(M,y0,PW,11*rh);
-    for(let c=1;c<nc;c++) line(X[c],y0,X[c],y0+11*rh);
-    for(let r=1;r<11;r++) line(X[3],y0+r*rh,X[nc],y0+r*rh);
-    line(X[0],y0+rh,X[3],y0+rh);
-    const ry=r=>y0+(r+.5)*rh;
-    T(i+1,mid(0),ry(0)); T('STYLE',mid(1),ry(0)); T('COLORS',mid(2),ry(0)); T('Description',X[3]+2,ry(0),{a:'left'}); T('Total',mid(TC),ry(0));
-    descLines(s,pfit).forEach((l,k)=>{if(l.k==='t'){doc.setFillColor(255,255,0);R(X[3]+.4,y0+(1+k)*rh+.4,X[4]-X[3]-.8,rh-.8,'F')}
-      l.k==='c'?T(l.t,mid(3),ry(1+k),{b:1}):T(l.t,X[3]+2,ry(1+k),{a:'left',b:1})});
-    s.labels.forEach((lab,j)=>{const c=4+j; T(lab,mid(c),ry(1),{b:1}); T(s.q[j]||'-',mid(c),ry(2),{b:1}); T(s.q[j],mid(c),ry(5),{c:[255,0,0],sz:7})});
-    T(s.tot,mid(TC),ry(5),{b:1}); T('your Ref.',X[3]+2,ry(7),{a:'left'});
-    if(s.so) pic(s.so.buf,s.so.w/s.so.h,X[1]+4,y0+rh+4,X[2]-X[1]-8,10*rh-8,s.so.ext==='png'?'PNG':'JPEG');
-    const cb=at?at[i].cb:s.cb; if(cb) pic(cb,CW/(at?Math.round(AH*f):AH),X[2]+1,y0+rh+1,X[3]-X[2]-2,10*rh-2);
-  })});
-  let y=M+TH+pl.pages[pl.pages.length-1].length*BH+6;
-  if(ty(y+16)>842-M){doc.addPage();y=M}
-  T('GRAND TOTAL',X[3]+2,y+8,{a:'left',b:1,sz:9}); T(D.grand,(X[4]+X[3+m+1])/2,y+8,{b:1,sz:9});
+    y=M+TH; pg.forEach(i=>{const s=D.styles[i]; y+=kindOf(D,s)==='std'?drawStd(s,y,i):drawPrint(s,y)});
+  });
+  y+=6; if(ty(y+16)>BOT){doc.addPage();y=M}
+  if(D.mode==='std'){const X=XS; T('GRAND TOTAL',X[3]+2,y+8,{a:'left',b:1,sz:9}); T(D.grand,(X[4]+X[3+D.m+1])/2,y+8,{b:1,sz:9})}
+  else{const X=XP, TC=X.length-2; T('GRAND TOTAL',X[3]-3,y+8,{a:'right',b:1,sz:9}); T(D.grand,(X[4]+X[TC])/2,y+8,{b:1,sz:9})}
   pageNums(doc);
   return doc.output('blob');
 }
@@ -1277,7 +1301,7 @@ document.addEventListener('keydown',e=>{
   if(e.altKey&&!mod){
     if(e.code==='KeyN'){e.preventDefault();addStyle();return}
     const s=curStyle(false); if(!s)return;
-    if(e.code==='KeyP'&&S.mode==='print'){e.preventDefault();cardEl(s).querySelector('.bap').click();return}
+    if(e.code==='KeyP'&&em(s)==='print'){e.preventDefault();cardEl(s).querySelector('.bap').click();return}
     if(e.key==='ArrowUp'||e.key==='ArrowDown'){
       e.preventDefault(); const fi=[...cardEl(s).querySelectorAll(FLD)].indexOf(document.activeElement);
       move(s,e.key==='ArrowUp'?-1:1); const f=cardEl(s).querySelectorAll(FLD)[fi]; if(f)f.focus({preventScroll:true});
@@ -1301,7 +1325,7 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('paste',e=>{
   const fs=[...((e.clipboardData&&e.clipboardData.files)||[])].filter(f=>f.type.startsWith('image/')); if(!fs.length)return;
   if(e.target.matches&&e.target.matches('input,textarea')&&e.clipboardData.getData('text/plain'))return;
-  if(S.mode==='print'){
+  if(em(curStyle(true))==='print'){
     const a=document.activeElement, row=a&&a.closest?a.closest('.pr'):null, onPic=a&&a.closest?a.closest('.dz'):null, ps=curStyle(true);
     e.preventDefault();
     if(onPic&&ps)addFiles(fs,ps,'sp',true);
