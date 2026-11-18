@@ -172,6 +172,9 @@ input.fpr{display:none!important}
 .czr input{flex:1;min-width:0}
 .czr button{width:44px;min-height:44px;height:44px;padding:0;flex:none!important;font-size:20px}
 #crop .row button{width:auto;min-height:44px;padding:10px;font-size:15px}
+#casp{margin:0 0 10px;justify-content:center}
+#casp button.on{background:var(--ac);color:#fff}
+button.crp{display:block;width:auto;min-height:0;margin:6px auto 0;padding:5px 12px;font-size:13px;font-weight:600;border-radius:8px;background:var(--card);color:var(--ac);border:1.5px solid var(--ac)}
 .sizes.prq{grid-template-columns:repeat(auto-fill,minmax(58px,1fr))}
 .dzh,.dk,#keys,#wh{display:none}
 .addsz .stot{margin-top:10px}
@@ -326,7 +329,7 @@ input[type=checkbox]:focus-visible{outline:2px solid var(--ac);outline-offset:2p
 <div id="msg"></div>
 </main>
 <div id="toast" hidden></div>
-<div id="crop" hidden><div class="box"><b style="font-size:18px">Adjust picture</b><p>Drag to move. Pinch, scroll or use the slider to zoom in and cut off the background.</p><div id="cfr"><img id="cim" alt="" draggable="false"></div><div class="czr"><button type="button" class="sec" id="czo" aria-label="Zoom out">−</button><input type="range" id="cz" min="1" max="6" step="0.01" value="1" aria-label="Zoom"><button type="button" class="sec" id="czi" aria-label="Zoom in">＋</button></div><div class="row"><button type="button" class="sec" id="cno" style="flex:1">Keep as is</button><button type="button" class="sec" id="cchg" style="flex:1">Change photo</button><button type="button" id="cok" style="flex:1">Save</button></div></div></div>
+<div id="crop" hidden><div class="box"><b style="font-size:18px">Adjust picture</b><p>Drag to move. Pinch, scroll or use the slider to zoom. Pick a shape to crop.</p><div class="chips" id="casp" hidden></div><div id="cfr"><img id="cim" alt="" draggable="false"></div><div class="czr"><button type="button" class="sec" id="czo" aria-label="Zoom out">−</button><input type="range" id="cz" min="0.5" max="6" step="0.01" value="1" aria-label="Zoom"><button type="button" class="sec" id="czi" aria-label="Zoom in">＋</button></div><div class="row"><button type="button" class="sec" id="cno" style="flex:1">Keep as is</button><button type="button" class="sec" id="cchg" style="flex:1">Change photo</button><button type="button" id="cok" style="flex:1">Save</button></div></div></div>
 <div id="pv" hidden><div class="pvh"><b>Preview</b><span id="pvinfo"></span><div class="pvc"><span class="pvl">Pages</span><button type="button" class="ib" id="pvm" aria-label="Fewer pages">−</button><span id="pvn"></span><button type="button" class="ib" id="pvp" aria-label="More pages">＋</button></div><div class="pvc"><span class="pvl">Height</span><input type="range" id="pvhr" min="30" max="100" step="1" value="100" aria-label="Row height"><span id="pvhv">100%</span><button type="button" class="chip" id="pva">Reset</button></div><button type="button" class="ib" id="pvx" aria-label="Close preview">✕</button></div><div id="pvb"></div><div class="pvf"><button type="button" id="pvgo">Create Excel + PDF</button></div></div>
 <div id="dlg" hidden><div class="box"><b style="font-size:19px">Start a new sheet?</b><p>All current data and photos will be deleted. This cannot be undone.</p><div class="row"><button type="button" class="sec" id="dno" style="flex:1">Cancel</button><button type="button" class="sec danger" id="dyes" style="flex:1">Yes, start new</button></div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js" onerror="var x=document.createElement('script');x.src='exceljs.min.js';document.head.appendChild(x)"></script>
@@ -388,14 +391,18 @@ const picsUpdated=n=>{if(n>1){render();toast('Updated all '+n+' copies of this p
 // ---- adjust picture: zoom and move inside a frame, then save the visible part ----
 let cropKey=null;
 function cropUI(m,aspect,canChange){return new Promise(res=>{
-  const src=m.src||m, A=aspect||src.w/src.h, box=$('cfr'), img=$('cim');
-  const maxW=Math.min(innerWidth-66,420), maxH=Math.min(innerHeight*.5,420); let FW=maxW, FH=FW/A; if(FH>maxH){FH=maxH;FW=FH*A}
-  box.style.width=FW+'px'; box.style.height=FH+'px'; img.src=src.url;
-  const base=Math.min(FW/src.w,FH/src.h); let z=1, ox=0, oy=0;
-  const lay=()=>{const w=src.w*base*z,h=src.h*base*z,mx=Math.max(0,(w-FW)/2),my=Math.max(0,(h-FH)/2);
+  const src=m.src||m, box=$('cfr'), img=$('cim'), ZMIN=.5;
+  const maxW=Math.min(innerWidth-66,420), maxH=Math.min(innerHeight*.5,420); let FW, FH, base, z=1, ox=0, oy=0;
+  const frame=A=>{FW=maxW; FH=FW/A; if(FH>maxH){FH=maxH;FW=FH*A} box.style.width=FW+'px'; box.style.height=FH+'px'; base=Math.min(FW/src.w,FH/src.h)};
+  img.src=src.url; frame(aspect||src.w/src.h);
+  // shapes to crop to (style picture etc.): original, square, 3:4, tall like the STYLE box in the sheet
+  const ca=$('casp'); ca.innerHTML=''; ca.hidden=!!aspect;
+  if(!aspect)[['Original',src.w/src.h],['Square',1],['3 : 4',3/4],['Tall',1/2]].forEach(([t,a],k)=>{const b=document.createElement('button');b.type='button';b.className='chip'+(k?'':' on');b.textContent=t;
+    b.onclick=()=>{ca.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); frame(a); z=Math.max(FW/src.w,FH/src.h)/base; ox=oy=0; lay()}; ca.append(b)});   // new shape: picture fills the frame
+  const lay=()=>{const w=src.w*base*z,h=src.h*base*z,mx=Math.abs(w-FW)/2,my=Math.abs(h-FH)/2;
     ox=Math.max(-mx,Math.min(mx,ox)); oy=Math.max(-my,Math.min(my,oy));
     img.style.width=w+'px'; img.style.height=h+'px'; img.style.transform=`translate(${(FW-w)/2+ox}px,${(FH-h)/2+oy}px)`; $('cz').value=z};
-  const setZ=(nz,cx,cy)=>{nz=Math.max(1,Math.min(6,nz)); if(cx==null){cx=FW/2;cy=FH/2}
+  const setZ=(nz,cx,cy)=>{nz=Math.max(ZMIN,Math.min(6,nz)); if(cx==null){cx=FW/2;cy=FH/2}
     const w0=src.w*base*z,h0=src.h*base*z,px=(cx-((FW-w0)/2+ox))/w0,py=(cy-((FH-h0)/2+oy))/h0; z=nz;
     const w=src.w*base*z,h=src.h*base*z; ox=cx-px*w-(FW-w)/2; oy=cy-py*h-(FH-h)/2; lay()};
   const pts=new Map(); let pd=0;
@@ -503,7 +510,7 @@ function card(s,i){
   <label>Style code (e.g. DHI0021)</label><input type="text" class="cd" autocapitalize="characters">
   <label>Note</label><input type="text" class="nt" autocapitalize="characters">
   </div><div class="g2 dz">
-  <label>Style picture</label><input type="file" accept="image/*" class="fsp"><div class="dzb"><div class="thumbs tsp"></div><div class="dzh">Drop a picture or click</div></div>
+  <label>Style picture</label><input type="file" accept="image/*" class="fsp"><div class="dzb"><div class="thumbs tsp"></div><div class="dzh">Drop a picture or click</div></div><button type="button" class="crp" hidden>✂ Zoom / crop</button>
   </div><div class="g3 dz">
   <label><span class="mo">Color pictures (select several; tap again to add more)</span><span class="dk">Color pictures</span></label><input type="file" accept="image/*" multiple class="fcp"><div class="dzb"><div class="thumbs tcp"></div><div class="dzh">Drop color pictures here</div></div>
   ${i>0?'<label class="same"><input type="checkbox" class="sm"> Same color picture as previous style</label>':''}
@@ -548,6 +555,9 @@ function card(s,i){
   drawSizes();
   
   thumbs(Q('.tsp'),s.sp); thumbs(Q('.tcp'),s.cp);
+  const crp=Q('.crp'), crpShow=()=>{crp.hidden=!s.sp.length}; crpShow();
+  crp.onclick=e=>{e.stopPropagation(); const im=Q('.tsp img'); if(im)im.click()};
+  new MutationObserver(crpShow).observe(Q('.tsp'),{childList:true});
   Q('.fsp').onchange=e=>pick(e,s,'sp',Q('.tsp'),true); Q('.fcp').onchange=e=>pick(e,s,'cp',Q('.tcp'));
   const sm=Q('.sm'); if(sm){sm.checked=s.same;sm.onchange=()=>{s.same=sm.checked;save()}}
   // this style only: switch between style-wise and print-wise (the sheet type at the top stays as it is)
