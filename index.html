@@ -344,7 +344,7 @@ input[type=checkbox]:focus-visible{outline:2px solid var(--ac);outline-offset:2p
 </main>
 <div id="toast" hidden></div>
 <div id="crop" hidden><div class="box"><b style="font-size:18px">Adjust picture</b><p>Drag to move. Pinch, scroll or use the slider to zoom. Pick a shape to crop.</p><div class="chips" id="casp" hidden></div><div id="cfr"><img id="cim" alt="" draggable="false"></div><div class="czr"><button type="button" class="sec" id="czo" aria-label="Zoom out">−</button><input type="range" id="cz" min="0.5" max="6" step="0.01" value="1" aria-label="Zoom"><button type="button" class="sec" id="czi" aria-label="Zoom in">＋</button></div><div class="row"><button type="button" class="sec" id="cno" style="flex:1">Keep as is</button><button type="button" class="sec" id="cchg" style="flex:1">Change photo</button><button type="button" id="cok" style="flex:1">Save</button></div></div></div>
-<div id="pv" hidden><div class="pvh"><b>Preview</b><span id="pvinfo"></span><div class="pvc"><span class="pvl">Pages</span><button type="button" class="ib" id="pvm" aria-label="Fewer pages">−</button><span id="pvn"></span><button type="button" class="ib" id="pvp" aria-label="More pages">＋</button></div><div class="pvc"><span class="pvl">Height</span><input type="range" id="pvhr" min="30" max="100" step="1" value="100" aria-label="Row height"><span id="pvhv">100%</span><button type="button" class="chip" id="pva">Reset</button></div><button type="button" class="ib" id="pvx" aria-label="Close preview">✕</button></div><div id="pvb"></div><div class="pvf"><button type="button" id="pvgo">Create Excel + PDF</button></div></div>
+<div id="pv" hidden><div class="pvh"><b>Preview</b><span id="pvinfo"></span><div class="pvc"><span class="pvl">Pages</span><button type="button" class="ib" id="pvm" aria-label="Fewer pages">−</button><span id="pvn"></span><button type="button" class="ib" id="pvp" aria-label="More pages">＋</button></div><div class="pvc"><span class="pvl">Height</span><input type="range" id="pvhr" min="30" max="300" step="1" value="100" aria-label="Row height"><span id="pvhv">100%</span><button type="button" class="chip" id="pva">Reset</button></div><button type="button" class="ib" id="pvx" aria-label="Close preview">✕</button></div><div id="pvb"></div><div class="pvf"><button type="button" id="pvgo">Create Excel + PDF</button></div></div>
 <div id="dlg" hidden><div class="box"><b style="font-size:19px">Start a new sheet?</b><p>All current data and photos will be deleted. This cannot be undone.</p><div class="row"><button type="button" class="sec" id="dno" style="flex:1">Cancel</button><button type="button" class="sec danger" id="dyes" style="flex:1">Yes, start new</button></div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js" onerror="var x=document.createElement('script');x.src='exceljs.min.js';document.head.appendChild(x)"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" onerror="var x=document.createElement('script');x.src='jspdf.umd.min.js';document.head.appendChild(x)"></script>
@@ -806,7 +806,7 @@ $('dyes').onclick=()=>{$('dlg').hidden=true; $('cust').value='';$('country').val
   if(!st){try{st=JSON.parse(localStorage.getItem('os_text'))}catch(_){}}
   if(st&&Array.isArray(st.styles)){
     $('cust').value=st.cust||''; $('country').value=st.country||''; $('date').value=st.date||'';
-    S.mode=st.mode==='print'?'print':'std'; $('mode').value=S.mode; S.hf=Math.min(1,Math.max(HMIN,+st.hf||1));
+    S.mode=st.mode==='print'?'print':'std'; $('mode').value=S.mode; S.hf=Math.min(HMAX,Math.max(HMIN,+st.hf||1));
     for(const x of st.styles){
       const s={...newStyle(),...x};
       if(!Array.isArray(x.sizes)){const OLD=['XS','S','M','L','XL','XXL','3XL'],q=x.q||[];s.sizes=OLD.map((n,k)=>({n,q:q[k]||''})).filter((z,k)=>(k>=1&&k<=5)||(k==0&&x.xs)||(k==6&&x.x3)||z.q)}
@@ -907,7 +907,7 @@ const PMAX=10, CONT=' (CONT.)', PT=60; // prints per block, thumbnail px
 // Shared by the PDF, the Excel and the preview, so all three break pages the same way.
 // S.hf = row height (1 = normal, .5 = half). Only the HEIGHT shrinks; the width always stays full.
 const PM=5*72/25.4;   // page margin: 5 mm on every side (PDF points)
-const HMIN=.3, HKMIN=.5, HKMAX=2.5;
+const HMIN=.3, HMAX=3, HKMIN=.5, HKMAX=2.5;
 const HK=s=>Math.min(HKMAX,Math.max(HKMIN,+s.hk||1));   // this style's own height (1 = normal), set with -/+ in the preview
 function blockH(D){ // block heights in PDF points at full height
   const BH=(842-2*PM-24-26)/5;
@@ -917,16 +917,22 @@ function packPages(D,f){ // fill pages top to bottom at row height f
   const hs=blockH(D), cap=(842-2*PM)/f-24-26+.01, pages=[[]]; let used=0;
   hs.forEach((h,i)=>{if(pages[pages.length-1].length&&used+h>cap){pages.push([]);used=0} pages[pages.length-1].push(i); used+=h}); return pages;
 }
-function fitPages(D,want){ // tallest row height that still fits everything in `want` pages
-  if(packPages(D,1).length<=want) return 1;
-  let lo=HMIN, hi=1; for(let k=0;k<25;k++){const mid=(lo+hi)/2; if(packPages(D,mid).length<=want)lo=mid; else hi=mid}
+function fitPages(D,want){ // tallest rows that still fit everything in `want` pages (taller rows = pages filled up)
+  const hs=blockH(D), big=Math.max(...hs);
+  const ok=f=>packPages(D,f).length<=want&&big<=(842-2*PM)/f-24-26;   // no single style taller than a page
+  if(ok(HMAX)) return HMAX;
+  let lo=HMIN, hi=HMAX; for(let k=0;k<30;k++){const mid=(lo+hi)/2; if(ok(mid))lo=mid; else hi=mid}
   return Math.floor(lo*100)/100;
 }
 function getPlan(D){
-  const f=Math.min(1,Math.max(HMIN,+S.hf||1));
+  const f=Math.min(HMAX,Math.max(HMIN,+S.hf||1));
   const key=f+'|'+D.styles.map(s=>s.hk||1).join(',');
   if(D._plan&&D._pk===key) return D._plan;
-  D._pk=key; return D._plan={pages:packPages(D,f),f};
+  D._pk=key; const pages=packPages(D,f), hs=blockH(D), cap=(842-2*PM)/f-24-26, gs=[], pf=[];
+  pages.forEach((pg,pi)=>{const used=pg.reduce((a,i)=>a+hs[i],0);
+    const k=pi<pages.length-1&&used>0?Math.min(2,Math.max(1,cap/used)):1; pf.push(k);
+    pg.forEach(i=>{gs[i]=+(f*k*(D.styles[i].hk||1)).toFixed(3)})});
+  return D._plan={pages,f,pf,gs};
 }
 const fontK=f=>Math.min(1,f*1.15);   // text shrinks a little when rows get very low, so it still fits
 // collage / style picture re-made at the lower height so pictures fill their box instead of shrinking sideways
@@ -1042,7 +1048,7 @@ async function buildXlsx(D){
   const letter=n=>ws.getColumn(n).letter;
   ws.columns=G.cols.map(w=>({width:w}));
   const pl=getPlan(D), f=pl.f, lastOf=new Set(pl.pages.slice(0,-1).map(p=>p[p.length-1]));
-  const gOf=x=>+(f*(x.hk||1)).toFixed(3);   // this block's height factor
+  const gIx=new Map(D.styles.map((x,i)=>[x,pl.gs[i]])), gOf=x=>gIx.get(x);   // this block's height factor
   const hX=x=>kindOf(D,x)==='std'?11*+(15.95*gOf(x)).toFixed(2)+6.75:(15.95+48+24+x.labels.length*15.95+15.95)*gOf(x)+6.75;
   const phX=pl.pages.map((p,k)=>(k?0:50.25)+p.reduce((a,i)=>a+hX(D.styles[i]),0)+(k===pl.pages.length-1?32:0));
   const sum=G.cols.reduce((a,b)=>a+b,0);
@@ -1147,7 +1153,7 @@ async function buildPdf(D){
   const fitW=(w,sz)=>t=>{doc.setFont('helvetica','bold');doc.setFontSize((sz||8)*fk);return doc.getTextWidth(t)<=w};
   const pic=(buf,asp,cx,cy,cw,ch,fmt)=>{ch*=g; let w=cw,h=cw/asp; if(h>ch){h=ch;w=ch*asp}
     doc.addImage(new Uint8Array(buf),fmt||'JPEG',cx+(cw-w)/2,ty(cy)+(ch-h)/2,w,h)};
-  const at=await Promise.all(D.styles.map(s=>kindOf(D,s)==='std'&&f*(s.hk||1)!==1?picsAt(s,+(f*(s.hk||1)).toFixed(3)):null));
+  const at=await Promise.all(D.styles.map((s,i)=>kindOf(D,s)==='std'&&pl.gs[i]!==1?picsAt(s,pl.gs[i]):null));
   const drawStd=(s,y0,i)=>{const X=XS, nc=X.length-1, TC=nc-1, mid=c=>(X[c]+X[c+1])/2, ry=r=>y0+(r+.5)*rh;
     const pfit=fitW(X[4]-X[3]-5);
     doc.setFillColor(255,192,0); R(M,y0+11*rh,PW,GAP,'F');
@@ -1194,7 +1200,7 @@ async function buildPdf(D){
   pl.pages.forEach((pg,pi)=>{
     if(pi) doc.addPage(); doc.setLineWidth(.5); doc.setDrawColor(0);
     at0(M); R(M,M,PW,TH); T(`${D.cust} ${D.dtxt}`,M+PW/2,M+TH/2,{b:1,sz:13});
-    yp=M+TH*f; pg.forEach(i=>{const s=D.styles[i]; g=+(f*(s.hk||1)).toFixed(3); fk=fontK(g); Y0=M; P0=yp;
+    yp=M+TH*f; pg.forEach(i=>{const s=D.styles[i]; g=pl.gs[i]; fk=fontK(g); Y0=M; P0=yp;
       yp+=(kindOf(D,s)==='std'?drawStd(s,M,i):drawPrint(s,M))*g});
   });
   at0(yp); y=M+6; if(ty(y+16)>BOT){doc.addPage();at0(M);y=M}
@@ -1281,13 +1287,13 @@ function pvUi(){
   $('pvn').textContent=np+(np>1?' pages':' page');
   $('pvhr').value=hp; $('pvhv').textContent=hp+'%';
   $('pvinfo').textContent=`${D.styles.length} ${D.mode==='print'?'blocks':'styles'} · row height ${hp}%`;
-  $('pvm').disabled=np<=1||packPages(D,HMIN).length>=np; $('pvp').disabled=pl.f>=1; $('pva').disabled=pl.f>=1;
+  $('pvm').disabled=np<=1||packPages(D,HMIN).length>=np; $('pvp').disabled=pl.f>=HMAX; $('pva').disabled=pl.f===1;
 }
 // sliders over the styles of page `pi`: same positions as buildPdf (title, then each block at its own height)
 function pvSliders(D,pi,k){
   const pl=getPlan(D), pg=pl.pages[pi]; if(!pg)return [];
   const hs=blockH(D); let yp=PM+24*pl.f; const out=[];
-  pg.forEach(i=>{const x=D.styles[i], h=hs[i]*pl.f, src=S.styles[x.no-1];
+  pg.forEach(i=>{const x=D.styles[i], h=hs[i]*pl.f*pl.pf[pi], src=S.styles[x.no-1];
     if(src){const v=HK(src), d=document.createElement('label'); d.className='pvsl'; d.style.top=(yp*k+4)+'px';
       d.title='Height of style '+x.no+' (drag, then let go)';
       d.innerHTML=`${x.no}<input type="range" min="${HKMIN*100}" max="${HKMAX*100}" step="10" value="${Math.round(v*100)}" aria-label="Height of style ${x.no}"><span>${Math.round(v*100)}%</span>`;
@@ -1316,7 +1322,7 @@ async function pvDraw(){
     const box=document.createElement('div'); box.className='pvp'; box.append(pgb,'Page '+i+' of '+pdf.numPages); out.push(box)}
   $('pvb').replaceChildren(...out);
 }
-const pvSet=(v,wait)=>{if(!PV)return; S.hf=Math.min(1,Math.max(HMIN,v)); save(); pvUi(); clearTimeout(pvT);
+const pvSet=(v,wait)=>{if(!PV)return; S.hf=Math.min(HMAX,Math.max(HMIN,v)); save(); pvUi(); clearTimeout(pvT);
   pvT=setTimeout(()=>pvDraw().catch(e=>toast('Preview failed: '+(e.message||e))),wait?250:0)};
 $('pvbtn').onclick=pvOpen; $('pvx').onclick=pvClose;
 $('pvm').onclick=()=>{if(PV)pvSet(fitPages(PV.D,getPlan(PV.D).pages.length-1))};
