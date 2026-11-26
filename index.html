@@ -124,6 +124,12 @@ button#pvbtn{display:block;width:100%;margin-top:8px}
 .pvwait{color:var(--mut);padding:30px}
 #pvs{display:flex;gap:8px;overflow-x:auto;padding:8px 14px;background:var(--card);border-bottom:1px solid var(--bd)}
 #pvs:empty{display:none}
+.pvpg{position:relative}
+.pvsl{position:absolute;right:6px;display:flex;align-items:center;gap:6px;padding:3px 8px;border-radius:9px;background:rgba(255,255,255,.93);
+  border:1.5px solid var(--ac);box-shadow:0 1px 6px rgba(0,0,0,.25);font-size:12px;font-weight:700;color:#222;opacity:.9;z-index:2}
+.pvsl:hover,.pvsl:focus-within{opacity:1}
+.pvsl input{width:110px;accent-color:var(--ac);margin:0}
+.pvsl span{min-width:38px;text-align:right}
 .pvst{display:flex;align-items:center;gap:6px;flex:none;border:1.5px solid var(--bd);border-radius:10px;padding:4px 6px 4px 10px;font-size:13px;white-space:nowrap}
 .pvst.ch{border-color:var(--ac)}
 .pvst b{max-width:150px;overflow:hidden;text-overflow:ellipsis}
@@ -338,7 +344,7 @@ input[type=checkbox]:focus-visible{outline:2px solid var(--ac);outline-offset:2p
 </main>
 <div id="toast" hidden></div>
 <div id="crop" hidden><div class="box"><b style="font-size:18px">Adjust picture</b><p>Drag to move. Pinch, scroll or use the slider to zoom. Pick a shape to crop.</p><div class="chips" id="casp" hidden></div><div id="cfr"><img id="cim" alt="" draggable="false"></div><div class="czr"><button type="button" class="sec" id="czo" aria-label="Zoom out">−</button><input type="range" id="cz" min="0.5" max="6" step="0.01" value="1" aria-label="Zoom"><button type="button" class="sec" id="czi" aria-label="Zoom in">＋</button></div><div class="row"><button type="button" class="sec" id="cno" style="flex:1">Keep as is</button><button type="button" class="sec" id="cchg" style="flex:1">Change photo</button><button type="button" id="cok" style="flex:1">Save</button></div></div></div>
-<div id="pv" hidden><div class="pvh"><b>Preview</b><span id="pvinfo"></span><div class="pvc"><span class="pvl">Pages</span><button type="button" class="ib" id="pvm" aria-label="Fewer pages">−</button><span id="pvn"></span><button type="button" class="ib" id="pvp" aria-label="More pages">＋</button></div><div class="pvc"><span class="pvl">Height</span><input type="range" id="pvhr" min="30" max="100" step="1" value="100" aria-label="Row height"><span id="pvhv">100%</span><button type="button" class="chip" id="pva">Reset</button></div><button type="button" class="ib" id="pvx" aria-label="Close preview">✕</button></div><div id="pvs" aria-label="Height of each style"></div><div id="pvb"></div><div class="pvf"><button type="button" id="pvgo">Create Excel + PDF</button></div></div>
+<div id="pv" hidden><div class="pvh"><b>Preview</b><span id="pvinfo"></span><div class="pvc"><span class="pvl">Pages</span><button type="button" class="ib" id="pvm" aria-label="Fewer pages">−</button><span id="pvn"></span><button type="button" class="ib" id="pvp" aria-label="More pages">＋</button></div><div class="pvc"><span class="pvl">Height</span><input type="range" id="pvhr" min="30" max="100" step="1" value="100" aria-label="Row height"><span id="pvhv">100%</span><button type="button" class="chip" id="pva">Reset</button></div><button type="button" class="ib" id="pvx" aria-label="Close preview">✕</button></div><div id="pvb"></div><div class="pvf"><button type="button" id="pvgo">Create Excel + PDF</button></div></div>
 <div id="dlg" hidden><div class="box"><b style="font-size:19px">Start a new sheet?</b><p>All current data and photos will be deleted. This cannot be undone.</p><div class="row"><button type="button" class="sec" id="dno" style="flex:1">Cancel</button><button type="button" class="sec danger" id="dyes" style="flex:1">Yes, start new</button></div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js" onerror="var x=document.createElement('script');x.src='exceljs.min.js';document.head.appendChild(x)"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" onerror="var x=document.createElement('script');x.src='jspdf.umd.min.js';document.head.appendChild(x)"></script>
@@ -900,14 +906,15 @@ const PMAX=10, CONT=' (CONT.)', PT=60; // prints per block, thumbnail px
 // ---- page plan: which styles go on which page, and the row height (f) ----
 // Shared by the PDF, the Excel and the preview, so all three break pages the same way.
 // S.hf = row height (1 = normal, .5 = half). Only the HEIGHT shrinks; the width always stays full.
+const PM=5*72/25.4;   // page margin: 5 mm on every side (PDF points)
 const HMIN=.3, HKMIN=.5, HKMAX=2.5;
 const HK=s=>Math.min(HKMAX,Math.max(HKMIN,+s.hk||1));   // this style's own height (1 = normal), set with -/+ in the preview
 function blockH(D){ // block heights in PDF points at full height
-  const BH=(842-2*22-24-26)/5;
+  const BH=(842-2*PM-24-26)/5;
   return D.styles.map(s=>(kindOf(D,s)==='print'?13+40+17+s.labels.length*13+13+5:BH)*(s.hk||1));
 }
 function packPages(D,f){ // fill pages top to bottom at row height f
-  const hs=blockH(D), cap=(842-2*22)/f-24-26+.01, pages=[[]]; let used=0;
+  const hs=blockH(D), cap=(842-2*PM)/f-24-26+.01, pages=[[]]; let used=0;
   hs.forEach((h,i)=>{if(pages[pages.length-1].length&&used+h>cap){pages.push([]);used=0} pages[pages.length-1].push(i); used+=h}); return pages;
 }
 function fitPages(D,want){ // tallest row height that still fits everything in `want` pages
@@ -1040,8 +1047,8 @@ async function buildXlsx(D){
   const phX=pl.pages.map((p,k)=>(k?0:50.25)+p.reduce((a,i)=>a+hX(D.styles[i]),0)+(k===pl.pages.length-1?32:0));
   const sum=G.cols.reduce((a,b)=>a+b,0);
   const wScale=D.mode==='std'?(D.m>5?Math.max(40,80-(D.m-5)*3):80):Math.max(40,Math.min(80,Math.floor(80*115/sum)));
-  const scale=Math.max(25,Math.min(wScale,Math.floor(100*(841.9-.6*72)/Math.max(...phX))));
-  ws.pageSetup={paperSize:9,orientation:'portrait',scale,horizontalCentered:true,margins:{left:.4,right:.4,top:.3,bottom:.3,header:.1,footer:.1}};
+  const scale=Math.max(25,Math.min(wScale,Math.floor(100*(841.9-2*PM)/Math.max(...phX))));
+  ws.pageSetup={paperSize:9,orientation:'portrait',scale,horizontalCentered:true,margins:{left:.197,right:.197,top:.197,bottom:.197,header:.08,footer:.08}};
   ws.getRow(2).height=20.25; ws.mergeCells(2,1,2,NC);
   const t=ws.getCell('A2'); t.value=`${D.cust} ${D.dtxt}`; t.font={bold:true,size:14}; t.alignment={horizontal:'center',vertical:'middle'};
   for(let c=1;c<=NC;c++) ws.getCell(2,c).border=border;
@@ -1130,7 +1137,7 @@ async function buildXlsx(D){
 // ---- PDF: one builder for style-wise, print-wise and mixed sheets; rows lowered by f, width stays full ----
 async function buildPdf(D){
   const {jsPDF}=window.jspdf, doc=new jsPDF({unit:'pt',format:'a4'});
-  const M=22, PW=595-2*M, TH=24, GAP=5, BOT=842-M;
+  const M=PM, PW=595-2*M, TH=24, GAP=5, BOT=842-M;
   const xs=chars=>{const sum=chars.reduce((a,b)=>a+b), X=[M]; chars.forEach(c=>X.push(X[X.length-1]+c/sum*PW)); return X};
   const ks=new Set(D.styles.map(x=>kindOf(D,x))), XS=ks.has('std')?xs(stdChars(D)):null, XP=ks.has('print')?xs(pwChars(D.mc)):null;
   const BH=(842-2*M-TH-26)/5, rh=(BH-GAP)/11, RH=13, PH=40, NH=17;
@@ -1201,7 +1208,7 @@ async function buildPdf(D){
 function pageNums(doc){
   const n=doc.getNumberOfPages(); if(n<2)return;
   for(let i=1;i<=n;i++){doc.setPage(i);doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(0,0,0);
-    doc.text('Page '+i+' of '+n,595/2,842-11,{align:'center',baseline:'middle'})}
+    doc.text('Page '+i+' of '+n,595/2,842-PM/2,{align:'center',baseline:'middle'})}
 }
 
 async function shareOrSave(blob,fname){
@@ -1275,21 +1282,24 @@ function pvUi(){
   $('pvhr').value=hp; $('pvhv').textContent=hp+'%';
   $('pvinfo').textContent=`${D.styles.length} ${D.mode==='print'?'blocks':'styles'} · row height ${hp}%`;
   $('pvm').disabled=np<=1||packPages(D,HMIN).length>=np; $('pvp').disabled=pl.f>=1; $('pva').disabled=pl.f>=1;
-  pvStyles();
 }
-// one chip per style: name, its own height and - / + (all parts of a long print style move together)
-function pvStyles(){
-  const box=$('pvs'), seen=new Set(); box.innerHTML='';
-  PV.D.styles.forEach(x=>{if(seen.has(x.no))return; seen.add(x.no); const src=S.styles[x.no-1]; if(!src)return;
-    const v=HK(src), c=document.createElement('div'); c.className='pvst'+(v!==1?' ch':'');
-    c.innerHTML=`<b></b><button type="button" class="ib" aria-label="Lower style ${x.no}">−</button><span>${Math.round(v*100)}%</span><button type="button" class="ib" aria-label="Taller style ${x.no}">＋</button>`;
-    c.querySelector('b').textContent=x.no+'. '+(x.name.replace(CONT,'')||'STYLE');
-    const [mi,pl]=c.querySelectorAll('button'); mi.disabled=v<=HKMIN; pl.disabled=v>=HKMAX;
-    mi.onclick=()=>pvHk(x.no,-.1); pl.onclick=()=>pvHk(x.no,.1); box.append(c)});
+// sliders over the styles of page `pi`: same positions as buildPdf (title, then each block at its own height)
+function pvSliders(D,pi,k){
+  const pl=getPlan(D), pg=pl.pages[pi]; if(!pg)return [];
+  const hs=blockH(D); let yp=PM+24*pl.f; const out=[];
+  pg.forEach(i=>{const x=D.styles[i], h=hs[i]*pl.f, src=S.styles[x.no-1];
+    if(src){const v=HK(src), d=document.createElement('label'); d.className='pvsl'; d.style.top=(yp*k+4)+'px';
+      d.title='Height of style '+x.no+' (drag, then let go)';
+      d.innerHTML=`${x.no}<input type="range" min="${HKMIN*100}" max="${HKMAX*100}" step="10" value="${Math.round(v*100)}" aria-label="Height of style ${x.no}"><span>${Math.round(v*100)}%</span>`;
+      const r=d.querySelector('input'), t=d.querySelector('span');
+      r.oninput=()=>{t.textContent=r.value+'%'}; r.onchange=()=>pvHk(x.no,r.value/100);
+      out.push(d)}
+    yp+=h});
+  return out;
 }
-function pvHk(no,d){
+function pvHk(no,v){   // v = new height of style `no` (1 = normal)
   const src=S.styles[no-1]; if(!PV||!src)return;
-  src.hk=Math.round(Math.min(HKMAX,Math.max(HKMIN,HK(src)+d))*10)/10;
+  src.hk=Math.round(Math.min(HKMAX,Math.max(HKMIN,v))*10)/10;
   PV.D.styles.forEach(x=>{if(x.no===no)x.hk=src.hk}); save(); pvUi(); clearTimeout(pvT);
   pvT=setTimeout(()=>pvDraw().catch(e=>toast('Preview failed: '+(e.message||e))),250);
 }
@@ -1302,7 +1312,8 @@ async function pvDraw(){
     const pg=await pdf.getPage(i), vp1=pg.getViewport({scale:1}), k=W/vp1.width, dpr=Math.min(2,devicePixelRatio||1), vp=pg.getViewport({scale:k*dpr});
     const c=document.createElement('canvas'); c.width=vp.width; c.height=vp.height; c.style.width=W+'px'; c.style.height=(vp1.height*k)+'px';
     await pg.render({canvasContext:c.getContext('2d'),viewport:vp}).promise; if(seq!==pvSeq)return;
-    const box=document.createElement('div'); box.className='pvp'; box.append(c,'Page '+i+' of '+pdf.numPages); out.push(box)}
+    const pgb=document.createElement('div'); pgb.className='pvpg'; pgb.append(c, ...pvSliders(D,i-1,W/595));
+    const box=document.createElement('div'); box.className='pvp'; box.append(pgb,'Page '+i+' of '+pdf.numPages); out.push(box)}
   $('pvb').replaceChildren(...out);
 }
 const pvSet=(v,wait)=>{if(!PV)return; S.hf=Math.min(1,Math.max(HMIN,v)); save(); pvUi(); clearTimeout(pvT);
