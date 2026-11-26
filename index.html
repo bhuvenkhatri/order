@@ -122,6 +122,13 @@ button#pvbtn{display:block;width:100%;margin-top:8px}
 .pvp{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;color:var(--mut)}
 .pvp canvas{display:block;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.25)}
 .pvwait{color:var(--mut);padding:30px}
+#pvs{display:flex;gap:8px;overflow-x:auto;padding:8px 14px;background:var(--card);border-bottom:1px solid var(--bd)}
+#pvs:empty{display:none}
+.pvst{display:flex;align-items:center;gap:6px;flex:none;border:1.5px solid var(--bd);border-radius:10px;padding:4px 6px 4px 10px;font-size:13px;white-space:nowrap}
+.pvst.ch{border-color:var(--ac)}
+.pvst b{max-width:150px;overflow:hidden;text-overflow:ellipsis}
+.pvst span{min-width:42px;text-align:center;font-weight:700}
+#pv .pvst button.ib{width:30px;height:30px;min-height:30px;font-size:17px}
 .pvf{padding:10px 14px;background:var(--card);border-top:1px solid var(--bd)}
 .pvf button{display:block;width:100%;max-width:420px;margin:0 auto}
 
@@ -174,6 +181,7 @@ input.fpr{display:none!important}
 #crop .row button{width:auto;min-height:44px;padding:10px;font-size:15px}
 #casp{margin:0 0 10px;justify-content:center}
 #casp button.on{background:var(--ac);color:#fff}
+button.crp[hidden]{display:none}
 button.crp{display:block;width:auto;min-height:0;margin:6px auto 0;padding:5px 12px;font-size:13px;font-weight:600;border-radius:8px;background:var(--card);color:var(--ac);border:1.5px solid var(--ac)}
 .sizes.prq{grid-template-columns:repeat(auto-fill,minmax(58px,1fr))}
 .dzh,.dk,#keys,#wh{display:none}
@@ -330,7 +338,7 @@ input[type=checkbox]:focus-visible{outline:2px solid var(--ac);outline-offset:2p
 </main>
 <div id="toast" hidden></div>
 <div id="crop" hidden><div class="box"><b style="font-size:18px">Adjust picture</b><p>Drag to move. Pinch, scroll or use the slider to zoom. Pick a shape to crop.</p><div class="chips" id="casp" hidden></div><div id="cfr"><img id="cim" alt="" draggable="false"></div><div class="czr"><button type="button" class="sec" id="czo" aria-label="Zoom out">−</button><input type="range" id="cz" min="0.5" max="6" step="0.01" value="1" aria-label="Zoom"><button type="button" class="sec" id="czi" aria-label="Zoom in">＋</button></div><div class="row"><button type="button" class="sec" id="cno" style="flex:1">Keep as is</button><button type="button" class="sec" id="cchg" style="flex:1">Change photo</button><button type="button" id="cok" style="flex:1">Save</button></div></div></div>
-<div id="pv" hidden><div class="pvh"><b>Preview</b><span id="pvinfo"></span><div class="pvc"><span class="pvl">Pages</span><button type="button" class="ib" id="pvm" aria-label="Fewer pages">−</button><span id="pvn"></span><button type="button" class="ib" id="pvp" aria-label="More pages">＋</button></div><div class="pvc"><span class="pvl">Height</span><input type="range" id="pvhr" min="30" max="100" step="1" value="100" aria-label="Row height"><span id="pvhv">100%</span><button type="button" class="chip" id="pva">Reset</button></div><button type="button" class="ib" id="pvx" aria-label="Close preview">✕</button></div><div id="pvb"></div><div class="pvf"><button type="button" id="pvgo">Create Excel + PDF</button></div></div>
+<div id="pv" hidden><div class="pvh"><b>Preview</b><span id="pvinfo"></span><div class="pvc"><span class="pvl">Pages</span><button type="button" class="ib" id="pvm" aria-label="Fewer pages">−</button><span id="pvn"></span><button type="button" class="ib" id="pvp" aria-label="More pages">＋</button></div><div class="pvc"><span class="pvl">Height</span><input type="range" id="pvhr" min="30" max="100" step="1" value="100" aria-label="Row height"><span id="pvhv">100%</span><button type="button" class="chip" id="pva">Reset</button></div><button type="button" class="ib" id="pvx" aria-label="Close preview">✕</button></div><div id="pvs" aria-label="Height of each style"></div><div id="pvb"></div><div class="pvf"><button type="button" id="pvgo">Create Excel + PDF</button></div></div>
 <div id="dlg" hidden><div class="box"><b style="font-size:19px">Start a new sheet?</b><p>All current data and photos will be deleted. This cannot be undone.</p><div class="row"><button type="button" class="sec" id="dno" style="flex:1">Cancel</button><button type="button" class="sec danger" id="dyes" style="flex:1">Yes, start new</button></div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js" onerror="var x=document.createElement('script');x.src='exceljs.min.js';document.head.appendChild(x)"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" onerror="var x=document.createElement('script');x.src='jspdf.umd.min.js';document.head.appendChild(x)"></script>
@@ -351,7 +359,7 @@ const DB={
 };
 const strip=m=>({blob:m.blob,w:m.w,h:m.h,ext:m.ext,sig:m.sig});
 const pack=()=>({v:1,mode:S.mode,hf:S.hf||1,cust:$('cust').value,country:$('country').value,date:$('date').value,
-  styles:S.styles.map(s=>({id:s.id,alt:!!s.alt,name:s.name,code:s.code,note:s.note||'',sizes:s.sizes.map(z=>({n:z.n,q:z.q})),same:s.same,sp:s.sp.map(strip),cp:s.cp.map(strip),prints:(s.prints||[]).map(p=>({id:p.id,name:p.name,q:p.q,img:p.img?strip(p.img):null}))}))});
+  styles:S.styles.map(s=>({id:s.id,alt:!!s.alt,hk:s.hk||1,name:s.name,code:s.code,note:s.note||'',sizes:s.sizes.map(z=>({n:z.n,q:z.q})),same:s.same,sp:s.sp.map(strip),cp:s.cp.map(strip),prints:(s.prints||[]).map(p=>({id:p.id,name:p.name,q:p.q,img:p.img?strip(p.img):null}))}))});
 let tm; function save(now){if(!ready)return;clearTimeout(tm);tm=setTimeout(doSave,now?0:150)}
 async function doSave(){
   const p=pack();
@@ -892,10 +900,11 @@ const PMAX=10, CONT=' (CONT.)', PT=60; // prints per block, thumbnail px
 // ---- page plan: which styles go on which page, and the row height (f) ----
 // Shared by the PDF, the Excel and the preview, so all three break pages the same way.
 // S.hf = row height (1 = normal, .5 = half). Only the HEIGHT shrinks; the width always stays full.
-const HMIN=.3;
+const HMIN=.3, HKMIN=.5, HKMAX=2.5;
+const HK=s=>Math.min(HKMAX,Math.max(HKMIN,+s.hk||1));   // this style's own height (1 = normal), set with -/+ in the preview
 function blockH(D){ // block heights in PDF points at full height
   const BH=(842-2*22-24-26)/5;
-  return D.styles.map(s=>kindOf(D,s)==='print'?13+40+17+s.labels.length*13+13+5:BH);
+  return D.styles.map(s=>(kindOf(D,s)==='print'?13+40+17+s.labels.length*13+13+5:BH)*(s.hk||1));
 }
 function packPages(D,f){ // fill pages top to bottom at row height f
   const hs=blockH(D), cap=(842-2*22)/f-24-26+.01, pages=[[]]; let used=0;
@@ -908,8 +917,9 @@ function fitPages(D,want){ // tallest row height that still fits everything in `
 }
 function getPlan(D){
   const f=Math.min(1,Math.max(HMIN,+S.hf||1));
-  if(D._plan&&D._pk===f) return D._plan;
-  D._pk=f; return D._plan={pages:packPages(D,f),f};
+  const key=f+'|'+D.styles.map(s=>s.hk||1).join(',');
+  if(D._plan&&D._pk===key) return D._plan;
+  D._pk=key; return D._plan={pages:packPages(D,f),f};
 }
 const fontK=f=>Math.min(1,f*1.15);   // text shrinks a little when rows get very low, so it still fits
 // collage / style picture re-made at the lower height so pictures fill their box instead of shrinking sideways
@@ -929,9 +939,8 @@ async function keepPic(m){
   const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); x.drawImage(m.el,0,0,c.width,c.height);
   const b=await new Promise(r=>c.toBlob(r,'image/jpeg',.85)); return {buf:await b.arrayBuffer(),ext:'jpeg'};
 }
-function shrinkFonts(ws,f){ // smaller text in lowered rows (title row 2 keeps its size)
-  const k=fontK(f); if(k>=1)return;
-  ws.eachRow((row,rn)=>{if(rn<FIRST)return; row.eachCell(c=>{const fo=c.font||{}; c.font={...fo,size:Math.max(6,Math.round((fo.size||11)*k*2)/2)}})});
+function shrinkFonts(ws,fOf){ // smaller text in lowered rows (title row 2 keeps its size); fOf(row) = that row's height factor
+  ws.eachRow((row,rn)=>{if(rn<FIRST)return; const k=fontK(fOf(rn)); if(k>=1)return; row.eachCell(c=>{const fo=c.font||{}; c.font={...fo,size:Math.max(6,Math.round((fo.size||11)*k*2)/2)}})});
 }
 // print-wise sheet: prints run ACROSS (small photo + name on top), sizes run DOWN
 const pwChars=mc=>[2.7,15.4,Math.max(10,Math.min(22,83.9-mc*9.5)),7,...Array(mc).fill(9.5),6]; // description shrinks to make room for prints
@@ -941,6 +950,13 @@ const otherMode=m=>m==='print'?'std':'print', em=s=>s&&s.alt?otherMode(S.mode):S
 const kindOf=(D,x)=>D.mode==='mix'?x.kind:D.mode;
 const COLS='_cols'; // hidden sheet of a mixed export: per block its first row and the real column of each layout column
 
+// missing standard sizes between S (or XS if used) and the biggest size used are added as 0 (S/M, FREE etc. untouched)
+function fillSizes(sizes){
+  const ix=sizes.map(z=>KNOWN.indexOf(z.n)).filter(i=>i>=0); if(!ix.length)return sizes;
+  const lo=Math.min(KNOWN.indexOf('S'),...ix), hi=Math.max(...ix), out=[...sizes];
+  for(let i=lo;i<=hi;i++) if(!out.some(z=>z.n===KNOWN[i])) out.push({n:KNOWN[i],q:''});
+  return out;
+}
 function checkSheet(){
   const cust=$('cust').value.trim().toUpperCase();
   if(!cust){toast('Enter the customer name');$('cust').focus();return null}
@@ -964,7 +980,7 @@ async function collectP(list){
   const styles=[];
   for(const s of list){
     const no=S.styles.indexOf(s)+1;
-    const zs=[...s.sizes].sort((a,b)=>rank(a.n)-rank(b.n)), labels=zs.map(z=>z.n), N=Math.max(1,labels.length);
+    const zs=fillSizes(s.sizes).sort((a,b)=>rank(a.n)-rank(b.n)), labels=zs.map(z=>z.n), N=Math.max(1,labels.length);
     let src=s.prints.filter(p=>p.img||p.name.trim()||labels.some(n=>+p.q[n])); if(!src.length)src=[newPrint()];
     const parts=Math.ceil(src.length/PMAX), per=Math.ceil(src.length/parts), so=s.sp[0]||null, sobuf=so?await so.blob.arrayBuffer():null;
     const sb=so?await compose([so],SW,Math.round((48+24+N*15.95+15.95)*4/3)-3,6,'inset'):null;
@@ -972,7 +988,7 @@ async function collectP(list){
       const prints=[];
       for(const p of src.slice(ci*per,(ci+1)*per)){const q=labels.map(n=>+p.q[n]||0);
         prints.push({name:p.name.trim().toUpperCase(),q,tot:q.reduce((a,b)=>a+b,0),th:p.img?await compose([p.img],PT,PT,1,false):null})}
-      styles.push({no,part:ci,labels,prints,name:s.name.trim().toUpperCase()+(ci?CONT:''),code:s.code.trim().replace(/[()]/g,'').toUpperCase(),note:(s.note||'').trim(),
+      styles.push({no,part:ci,hk:HK(s),labels,prints,name:s.name.trim().toUpperCase()+(ci?CONT:''),code:s.code.trim().replace(/[()]/g,'').toUpperCase(),note:(s.note||'').trim(),
         so:so?{buf:sobuf,w:so.w,h:so.h,ext:so.ext}:null, sb, soi:so,
         row:labels.map((n,j)=>prints.reduce((a,p)=>a+p.q[j],0)), tot:prints.reduce((a,p)=>a+p.tot,0)});
     }
@@ -980,15 +996,15 @@ async function collectP(list){
   return {styles,mc:Math.max(6,...styles.map(s=>s.prints.length)),grand:styles.reduce((a,s)=>a+s.tot,0)};
 }
 async function collectS(list){
-  const nsz=Math.max(1,...list.map(s=>s.sizes.length)), styles=[]; let lastBuf=null, lastCp=[];
+  const nsz=Math.max(1,...list.map(s=>fillSizes(s.sizes).length)), styles=[]; let lastBuf=null, lastCp=[];
   for(const [k,s] of list.entries()){
-    const idx=S.styles.indexOf(s), zs=[...s.sizes].sort((a,b)=>rank(a.n)-rank(b.n)), labels=zs.map(z=>z.n), q=zs.map(z=>+z.q||0);
+    const idx=S.styles.indexOf(s), zs=fillSizes(s.sizes).sort((a,b)=>rank(a.n)-rank(b.n)), labels=zs.map(z=>z.n), q=zs.map(z=>+z.q||0);
     // "same colour picture as previous style" only when the previous style is also style-wise
     let cb=null, cpl=s.cp; if(idx>0&&s.same&&lastBuf&&list[k-1]===S.styles[idx-1]){cb=lastBuf; cpl=lastCp} else if(s.cp.length){cb=await compose(s.cp,CW,AH,4); lastBuf=cb; lastCp=s.cp}
     const so=s.sp[0]||null;
     // originals of every colour picture, kept separately so a re-import gets each picture back (not the collage)
     const cps=await Promise.all(cpl.map(keepPic));
-    styles.push({no:idx+1,q,labels,note:(s.note||'').trim(),name:s.name.trim().toUpperCase(),code:s.code.trim().replace(/[()]/g,'').toUpperCase(),
+    styles.push({no:idx+1,hk:HK(s),q,labels,note:(s.note||'').trim(),name:s.name.trim().toUpperCase(),code:s.code.trim().replace(/[()]/g,'').toUpperCase(),
       so:so?{buf:await so.blob.arrayBuffer(),w:so.w,h:so.h,ext:so.ext}:null,
       sb:so?await compose([so],SW,AH,6,'inset'):null, cb, cps, cpi:cpl, soi:so, spk:so?await keepPic(so):null});
   }
@@ -1019,8 +1035,8 @@ async function buildXlsx(D){
   const letter=n=>ws.getColumn(n).letter;
   ws.columns=G.cols.map(w=>({width:w}));
   const pl=getPlan(D), f=pl.f, lastOf=new Set(pl.pages.slice(0,-1).map(p=>p[p.length-1]));
-  const RHs=+(15.95*f).toFixed(2), PH=+(48*f).toFixed(2), NH=+(24*f).toFixed(2), PTf=Math.round(PT*f);
-  const hX=x=>kindOf(D,x)==='std'?11*RHs+6.75:(15.95+48+24+x.labels.length*15.95+15.95)*f+6.75;
+  const gOf=x=>+(f*(x.hk||1)).toFixed(3);   // this block's height factor
+  const hX=x=>kindOf(D,x)==='std'?11*+(15.95*gOf(x)).toFixed(2)+6.75:(15.95+48+24+x.labels.length*15.95+15.95)*gOf(x)+6.75;
   const phX=pl.pages.map((p,k)=>(k?0:50.25)+p.reduce((a,i)=>a+hX(D.styles[i]),0)+(k===pl.pages.length-1?32:0));
   const sum=G.cols.reduce((a,b)=>a+b,0);
   const wScale=D.mode==='std'?(D.m>5?Math.max(40,80-(D.m-5)*3):80):Math.max(40,Math.min(80,Math.floor(80*115/sum)));
@@ -1029,7 +1045,7 @@ async function buildXlsx(D){
   ws.getRow(2).height=20.25; ws.mergeCells(2,1,2,NC);
   const t=ws.getCell('A2'); t.value=`${D.cust} ${D.dtxt}`; t.font={bold:true,size:14}; t.alignment={horizontal:'center',vertical:'middle'};
   for(let c=1;c<=NC;c++) ws.getCell(2,c).border=border;
-  const at=f<1?await Promise.all(D.styles.map(s=>picsAt(s,f))):null;
+  const at=await Promise.all(D.styles.map(s=>gOf(s)!==1?picsAt(s,gOf(s)):null)), rowK={};
   const mcv=document.createElement('canvas').getContext('2d'); mcv.font='bold 14.67px Calibri, Carlito, Arial, sans-serif';
   const xfit=t=>mcv.measureText(t).width<=126;
   const totCells=[], colsOut=[]; let r=FIRST;
@@ -1040,7 +1056,7 @@ async function buildXlsx(D){
     const box=(r1,r2)=>{for(let k=r1;k<=r2;k++)for(let c=F(1);c<=E(TC);c++)ws.getCell(k,c).border=border};
     const band=rr=>{ws.getRow(rr).height=6.75; for(let c=F(1);c<=E(TC);c++) ws.getCell(rr,c).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFC000'}}};
     const colAt=(c,px)=>{let k=F(c); while(k<E(c)&&px>G.cols[k-1]*7+5){px-=G.cols[k-1]*7+5;k++} return k-1+Math.max(0,Math.min(.99,px/(G.cols[k-1]*7+5)))};
-    let r2;
+    let r2; const gk=gOf(s), RHs=+(15.95*gk).toFixed(2), PH=+(48*gk).toFixed(2), NH=+(24*gk).toFixed(2), PTf=Math.round(PT*gk);
     if(kind==='std'){
       r2=r+10;
       for(let k=0;k<11;k++)ws.getRow(r+k).height=RHs; box(r,r+10); band(r+11);
@@ -1052,9 +1068,9 @@ async function buildXlsx(D){
         const tc=put(r+5,c,{formula:`SUM(${L(c)}${r+2}:${L(c)}${r+4})`,result:s.q[j]}); tc.font={color:{argb:'FFFF0000'},size:9}});
       put(r+5,TC,{formula:`SUM(${L(5)}${r+5}:${L(TC-1)}${r+5})`,result:s.tot},{b:1}); totCells.push(L(TC)+(r+5));
       put(r+7,4,'your Ref.',{h:'left',v:'top'});
-      const sb=at?at[idx].sb:s.sb, cb=at?at[idx].cb:s.cb;
+      const sb=at[idx]?at[idx].sb:s.sb, cb=at[idx]?at[idx].cb:s.cb;
       if(sb){const id=wb.addImage({buffer:sb,extension:'png'}); ws.addImage(id,{tl:{col:F(2)-1,row:r},br:{col:E(2),row:r+10},editAs:'twoCell'})}
-      if(cb){const id=wb.addImage({buffer:cb,extension:'jpeg'}); ws.addImage(id,{tl:{col:F(3)-1,row:r},ext:{width:CW,height:Math.round(AH*f)},editAs:'oneCell'})}
+      if(cb){const id=wb.addImage({buffer:cb,extension:'jpeg'}); ws.addImage(id,{tl:{col:F(3)-1,row:r},ext:{width:CW,height:Math.round(AH*gk)},editAs:'oneCell'})}
       if(lastOf.has(idx)) ws.getRow(r+11).addPageBreak();
     } else {
       const mc=TC-5, N=s.labels.length, last=r+3+N; r2=last;   // r header, r+1 photos, r+2 names, r+3.. sizes, last = TOTAL
@@ -1077,14 +1093,14 @@ async function buildXlsx(D){
       s.labels.forEach((lab,j)=>{const rr=r+3+j; put(rr,4,lab,{b:1}); put(rr,TC,{formula:`SUM(${L(5)}${rr}:${L(4+mc)}${rr})`,result:s.row[j]},{b:1})});
       put(last,4,'TOTAL',{b:1});
       put(last,TC,{formula:`SUM(${L(TC)}${r+3}:${L(TC)}${last-1})`,result:s.tot},{b:1}); totCells.push(L(TC)+last);
-      const sb=at?at[idx].sb:s.sb;
+      const sb=at[idx]?at[idx].sb:s.sb;
       if(sb){const id=wb.addImage({buffer:sb,extension:'png'}); ws.addImage(id,{tl:{col:F(2)-1,row:r},br:{col:E(2),row:last},editAs:'twoCell'})}
     }
     // merges: the planned ones, then every other layout cell that covers several real columns
     const inM=(rr,c)=>merges.some(([a,b,c2,d])=>rr>=a&&rr<=c2&&c>=b&&c<=d);
     merges.forEach(([a,b,c2,d])=>{if(a!==c2||F(b)!==E(d))ws.mergeCells(a,F(b),c2,E(d))});
     for(let rr=r;rr<=r2;rr++)for(let c=1;c<=TC;c++) if(!inM(rr,c)&&E(c)>F(c)) ws.mergeCells(rr,F(c),rr,E(c));
-    colsOut.push([r,...map.slice(1).map(x=>x[0])]);
+    colsOut.push([r,...map.slice(1).map(x=>x[0])]); for(let k=r;k<=r2;k++)rowK[k]=gk;
     r=r2+2;
   });
   const gr=r+1, gm=G.map[D.mode==='std'?'std':'print'], gF=c=>gm[c][0], gE=c=>gm[c][1];
@@ -1096,7 +1112,7 @@ async function buildXlsx(D){
   g.font={bold:true}; g.alignment={horizontal:'center'};
   ws.pageSetup.printArea=`A1:${letter(NC)}${gr}`;
   if(pl.pages.length>1)ws.headerFooter.oddFooter='&C&8Page &P of &N';
-  shrinkFonts(ws,f);
+  shrinkFonts(ws,rn=>rowK[rn]??f);
   // hidden sheet with the original pictures of style-wise blocks: row = block, column B = style picture, C.. = each colour picture
   if(D.styles.some(x=>kindOf(D,x)==='std')){
     const ph=wb.addWorksheet(PICS); ph.state='veryHidden';
@@ -1118,13 +1134,13 @@ async function buildPdf(D){
   const xs=chars=>{const sum=chars.reduce((a,b)=>a+b), X=[M]; chars.forEach(c=>X.push(X[X.length-1]+c/sum*PW)); return X};
   const ks=new Set(D.styles.map(x=>kindOf(D,x))), XS=ks.has('std')?xs(stdChars(D)):null, XP=ks.has('print')?xs(pwChars(D.mc)):null;
   const BH=(842-2*M-TH-26)/5, rh=(BH-GAP)/11, RH=13, PH=40, NH=17;
-  const pl=getPlan(D), f=pl.f, fk=fontK(f), ty=y=>M+(y-M)*f;
+  const pl=getPlan(D), f=pl.f; let g=f, fk=fontK(f), Y0=M, P0=M; const ty=y=>P0+(y-Y0)*g;   // g = height of the block being drawn
   const T=(s,x,y,o={})=>{doc.setFont('helvetica',o.b?'bold':'normal');doc.setFontSize((o.sz||8)*fk);doc.setTextColor(...(o.c||[0,0,0]));doc.text(String(s),x,ty(y),{align:o.a||'center',baseline:'middle'})};
-  const line=(x1,y1,x2,y2)=>doc.line(x1,ty(y1),x2,ty(y2)), R=(x,y,w,h,st)=>doc.rect(x,ty(y),w,h*f,st);
+  const line=(x1,y1,x2,y2)=>doc.line(x1,ty(y1),x2,ty(y2)), R=(x,y,w,h,st)=>doc.rect(x,ty(y),w,h*g,st);
   const fitW=(w,sz)=>t=>{doc.setFont('helvetica','bold');doc.setFontSize((sz||8)*fk);return doc.getTextWidth(t)<=w};
-  const pic=(buf,asp,cx,cy,cw,ch,fmt)=>{ch*=f; let w=cw,h=cw/asp; if(h>ch){h=ch;w=ch*asp}
+  const pic=(buf,asp,cx,cy,cw,ch,fmt)=>{ch*=g; let w=cw,h=cw/asp; if(h>ch){h=ch;w=ch*asp}
     doc.addImage(new Uint8Array(buf),fmt||'JPEG',cx+(cw-w)/2,ty(cy)+(ch-h)/2,w,h)};
-  const at=f<1?await Promise.all(D.styles.map(s=>kindOf(D,s)==='std'?picsAt(s,f):null)):null;
+  const at=await Promise.all(D.styles.map(s=>kindOf(D,s)==='std'&&f*(s.hk||1)!==1?picsAt(s,+(f*(s.hk||1)).toFixed(3)):null));
   const drawStd=(s,y0,i)=>{const X=XS, nc=X.length-1, TC=nc-1, mid=c=>(X[c]+X[c+1])/2, ry=r=>y0+(r+.5)*rh;
     const pfit=fitW(X[4]-X[3]-5);
     doc.setFillColor(255,192,0); R(M,y0+11*rh,PW,GAP,'F');
@@ -1138,7 +1154,7 @@ async function buildPdf(D){
     s.labels.forEach((lab,j)=>{const c=4+j; T(lab,mid(c),ry(1),{b:1}); T(s.q[j]||'-',mid(c),ry(2),{b:1}); T(s.q[j],mid(c),ry(5),{c:[255,0,0],sz:7})});
     T(s.tot,mid(TC),ry(5),{b:1}); T('your Ref.',X[3]+2,ry(7),{a:'left'});
     if(s.so) pic(s.so.buf,s.so.w/s.so.h,X[1]+4,y0+rh+4,X[2]-X[1]-8,10*rh-8,s.so.ext==='png'?'PNG':'JPEG');
-    const cb=at?at[i].cb:s.cb; if(cb) pic(cb,CW/(at?Math.round(AH*f):AH),X[2]+1,y0+rh+1,X[3]-X[2]-2,10*rh-2);
+    const a=at[i], cb=a?a.cb:s.cb; if(cb) pic(cb,CW/(a?Math.round(AH*g):AH),X[2]+1,y0+rh+1,X[3]-X[2]-2,10*rh-2);
     return BH};
   const drawPrint=(s,y)=>{const X=XP, nc=X.length-1, TC=nc-1, P0=4, mid=c=>(X[c]+X[c+1])/2;
     const N=s.labels.length, bh=RH+PH+NH+N*RH+RH+GAP;
@@ -1166,13 +1182,15 @@ async function buildPdf(D){
     s.labels.forEach((lab,j)=>{const cy=y3+(j+.5)*RH; T(lab,mid(3),cy,{b:1}); T(s.row[j],mid(TC),cy,{b:1})});
     T('TOTAL',mid(3),y4+RH/2,{b:1,sz:7}); T(s.tot,mid(TC),y4+RH/2,{b:1});
     return bh};
-  let y=M+TH;
+  const at0=(yp)=>{g=f; fk=fontK(f); Y0=M; P0=yp};   // back to the sheet's own height, logical y=M at page y yp
+  let yp=M, y=M;
   pl.pages.forEach((pg,pi)=>{
     if(pi) doc.addPage(); doc.setLineWidth(.5); doc.setDrawColor(0);
-    R(M,M,PW,TH); T(`${D.cust} ${D.dtxt}`,M+PW/2,M+TH/2,{b:1,sz:13});
-    y=M+TH; pg.forEach(i=>{const s=D.styles[i]; y+=kindOf(D,s)==='std'?drawStd(s,y,i):drawPrint(s,y)});
+    at0(M); R(M,M,PW,TH); T(`${D.cust} ${D.dtxt}`,M+PW/2,M+TH/2,{b:1,sz:13});
+    yp=M+TH*f; pg.forEach(i=>{const s=D.styles[i]; g=+(f*(s.hk||1)).toFixed(3); fk=fontK(g); Y0=M; P0=yp;
+      yp+=(kindOf(D,s)==='std'?drawStd(s,M,i):drawPrint(s,M))*g});
   });
-  y+=6; if(ty(y+16)>BOT){doc.addPage();y=M}
+  at0(yp); y=M+6; if(ty(y+16)>BOT){doc.addPage();at0(M);y=M}
   if(D.mode==='std'){const X=XS; T('GRAND TOTAL',X[3]+2,y+8,{a:'left',b:1,sz:9}); T(D.grand,(X[4]+X[3+D.m+1])/2,y+8,{b:1,sz:9})}
   else{const X=XP, TC=X.length-2; T('GRAND TOTAL',X[3]-3,y+8,{a:'right',b:1,sz:9}); T(D.grand,(X[4]+X[TC])/2,y+8,{b:1,sz:9})}
   pageNums(doc);
@@ -1257,10 +1275,28 @@ function pvUi(){
   $('pvhr').value=hp; $('pvhv').textContent=hp+'%';
   $('pvinfo').textContent=`${D.styles.length} ${D.mode==='print'?'blocks':'styles'} · row height ${hp}%`;
   $('pvm').disabled=np<=1||packPages(D,HMIN).length>=np; $('pvp').disabled=pl.f>=1; $('pva').disabled=pl.f>=1;
+  pvStyles();
+}
+// one chip per style: name, its own height and - / + (all parts of a long print style move together)
+function pvStyles(){
+  const box=$('pvs'), seen=new Set(); box.innerHTML='';
+  PV.D.styles.forEach(x=>{if(seen.has(x.no))return; seen.add(x.no); const src=S.styles[x.no-1]; if(!src)return;
+    const v=HK(src), c=document.createElement('div'); c.className='pvst'+(v!==1?' ch':'');
+    c.innerHTML=`<b></b><button type="button" class="ib" aria-label="Lower style ${x.no}">−</button><span>${Math.round(v*100)}%</span><button type="button" class="ib" aria-label="Taller style ${x.no}">＋</button>`;
+    c.querySelector('b').textContent=x.no+'. '+(x.name.replace(CONT,'')||'STYLE');
+    const [mi,pl]=c.querySelectorAll('button'); mi.disabled=v<=HKMIN; pl.disabled=v>=HKMAX;
+    mi.onclick=()=>pvHk(x.no,-.1); pl.onclick=()=>pvHk(x.no,.1); box.append(c)});
+}
+function pvHk(no,d){
+  const src=S.styles[no-1]; if(!PV||!src)return;
+  src.hk=Math.round(Math.min(HKMAX,Math.max(HKMIN,HK(src)+d))*10)/10;
+  PV.D.styles.forEach(x=>{if(x.no===no)x.hk=src.hk}); save(); pvUi(); clearTimeout(pvT);
+  pvT=setTimeout(()=>pvDraw().catch(e=>toast('Preview failed: '+(e.message||e))),250);
 }
 async function pvDraw(){
   if(!PV)return; const seq=++pvSeq, D=PV.D; pvUi();
-  const lib=await pdfjs(), pdf=await lib.getDocument({data:await (await buildPdf(D)).arrayBuffer()}).promise; if(seq!==pvSeq)return;
+  const lib=await pdfjs(), pdf=await lib.getDocument({data:await (await buildPdf(D)).arrayBuffer(),useSystemFonts:false,
+    standardFontDataUrl:'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/'}).promise; if(seq!==pvSeq)return;
   const W=Math.min(560,$('pvb').clientWidth-32), out=[];
   for(let i=1;i<=pdf.numPages;i++){
     const pg=await pdf.getPage(i), vp1=pg.getViewport({scale:1}), k=W/vp1.width, dpr=Math.min(2,devicePixelRatio||1), vp=pg.getViewport({scale:k*dpr});
